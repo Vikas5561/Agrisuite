@@ -1,0 +1,15 @@
+# Node dependencies
+node_modules/
+dist/
+.env
+
+# Maven build outputs
+target/
+*.class
+
+# IDE and System files
+.idea/
+*.iml
+.vscode/
+*.log
+forgot_password_otp.txt
