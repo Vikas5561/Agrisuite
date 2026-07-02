@@ -1,0 +1,45 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: SpringJPA
+  datasource:
+    url: jdbc:mysql://localhost:3306/vikas
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+app:
+  jwt:
+    # 256-bit key for HMAC-SHA256 (Base64 encoded)
+    # This secret is "SoftEdgeXAgriSuiteSecretKeyForJWTAuthTokenSigning" in Base64
+    secret: U29mdEVkZ2VYQWdyaVN1aXRlU2VjcmV0S2V5Rm9ySldUQXV0aFRva2VuU2lnbmluZw==
+    accessTokenExpirationMs: 900000 # 15 minutes
+    refreshTokenExpirationMs: 604800000 # 7 days
+  otp:
+    expirationMinutes: 10
+    maxAttempts: 5
+  login:
+    maxFailedAttempts: 5
+    lockDurationMinutes: 30
+  subscription:
+    gracePeriodDays: 7
+
+razorpay:
+  key-id: ${RAZORPAY_KEY_ID:mock_key_id}
+  key-secret: ${RAZORPAY_KEY_SECRET:mock_key_secret}
+
+twilio:
+  account-sid: ${TWILIO_ACCOUNT_SID:mock_account_sid}
+  auth-token: ${TWILIO_AUTH_TOKEN:mock_auth_token}
+  sms-number: ${TWILIO_SMS_NUMBER:+15017122661}
+  whatsapp-number: ${TWILIO_WHATSAPP_NUMBER:+14155238886}

@@ -1,0 +1,6609 @@
+SoftEdgeX AgriSuite
+Functional & Technical Design Specification (FTDS)
+Module 01 – Authentication & Authorization
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: © SoftEdgeX Technologies. All Rights Reserved.
+
+1. Module Overview
+Purpose
+The Authentication & Authorization module is responsible for authenticating users, authorizing access to application resources, managing sessions, enforcing role-based permissions, and protecting dealer data.
+Every user must be authenticated before accessing the application.
+This module is the entry point of the entire system.
+
+2. Business Objectives
+Secure the application. 
+Support multiple dealers (Multi-Tenant). 
+Prevent unauthorized access. 
+Ensure each dealer accesses only their own data. 
+Maintain user sessions securely. 
+Maintain audit logs. 
+Support future mobile applications. 
+
+3. User Roles
+3.1 Super Admin
+Description
+Owner of SoftEdgeX AgriSuite.
+Only SoftEdgeX Technologies can create this account.
+Permissions
+Manage all dealers 
+Manage subscriptions 
+Create/Edit/Delete plans 
+View all payments 
+View all farmers 
+View all invoices 
+Suspend dealers 
+Activate dealers 
+Access all reports 
+Manage notifications 
+Manage master data 
+Configure system settings 
+View audit logs 
+Manage backups 
+Restrictions
+None
+
+3.2 Dealer Admin
+Represents one fertilizer dealer.
+Permissions
+Manage Staff 
+Manage Farmers 
+Manage Products 
+Manage Inventory 
+Manage Sales 
+Manage Credit 
+Manage Reports 
+Configure Shop 
+Restrictions
+Cannot access another dealer's data. 
+Cannot change platform settings. 
+Cannot modify subscription plans. 
+
+3.3 Staff
+Belongs to one dealer.
+Permissions are assigned by Dealer Admin.
+Examples
+Cashier 
+Inventory Manager 
+Sales Executive 
+Field Officer 
+
+4. Login Screen
+UI Components
+Fields
+Field
+Required
+Validation
+Email
+Yes
+Valid email
+Password
+Yes
+Min 8 characters
+Remember Me
+No
+Checkbox
+Buttons
+Login 
+Forgot Password 
+
+5. Login Workflow
+Open Login Screen↓Enter Email & Password↓Validate Input↓Check User Exists↓Verify Password↓Check Account Status↓Check Subscription↓Generate JWT↓Generate Refresh Token↓Store Session↓Create Audit Log↓Open Dashboard
+
+6. Login Validation Rules
+Email
+Required 
+Valid format 
+Password
+Required 
+Minimum 8 characters 
+Maximum Failed Attempts
+5
+Lock Duration
+30 Minutes
+
+7. Account Status
+Possible Status
+ACTIVE 
+INACTIVE 
+LOCKED 
+SUSPENDED 
+EXPIRED 
+Only ACTIVE users can log in.
+
+8. Forgot Password
+Workflow
+Forgot Password↓Enter Email↓Verify User↓Generate OTP↓Store OTP in Redis↓Send OTP↓Verify OTP↓Allow Password Reset
+OTP
+6 Digits 
+Valid for 10 Minutes 
+Maximum 5 Attempts 
+
+9. Reset Password
+Fields
+New Password 
+Confirm Password 
+Validation
+Minimum 8 Characters 
+One Uppercase 
+One Lowercase 
+One Number 
+One Special Character 
+Example
+Soft@123
+Process
+Encrypt using BCrypt 
+Update Database 
+Delete OTP 
+Delete Active Sessions 
+Create Audit Log 
+
+10. Change Password
+Available only for logged-in users.
+Fields
+Current Password 
+New Password 
+Confirm Password 
+Business Rules
+Current password must match. 
+New password cannot be the same as the current password. 
+User is logged out from all devices after password change. 
+
+11. Logout
+Workflow
+Logout↓Invalidate JWT↓Delete Refresh Token↓Update Session↓Create Audit Log↓Redirect Login
+
+12. Session Management
+Store
+Device Name 
+Browser 
+IP Address 
+Login Time 
+Last Activity 
+Refresh Token 
+Status 
+Maximum Sessions
+Role
+Sessions
+Super Admin
+Unlimited
+Dealer Admin
+5
+Staff
+2
+
+13. Role-Based Access Control (RBAC)
+Module
+Super Admin
+Dealer Admin
+Staff
+Dashboard
+✅
+✅
+✅
+Dealer
+✅
+❌
+❌
+Staff
+✅
+✅
+Permission
+Farmer
+✅
+✅
+Permission
+Product
+✅
+✅
+Permission
+Inventory
+✅
+✅
+Permission
+Sales
+✅
+✅
+Permission
+Credit
+✅
+✅
+Permission
+Reports
+✅
+✅
+Permission
+Subscription
+✅
+View
+❌
+Settings
+✅
+Limited
+❌
+Dealer Admin can assign permissions to each Staff account.
+
+14. JWT Authentication
+Process
+Login↓Validate User↓Generate JWT↓Generate Refresh Token↓Return Tokens↓Frontend Stores JWT↓API Request↓JWT Filter↓Controller↓Service↓Database
+Access Token Expiry
+15 Minutes
+Refresh Token Expiry
+7 Days
+
+15. REST APIs
+Login
+POST /api/v1/auth/login
+Logout
+POST /api/v1/auth/logout
+Refresh Token
+POST /api/v1/auth/refresh
+Forgot Password
+POST /api/v1/auth/forgot-password
+Verify OTP
+POST /api/v1/auth/verify-otp
+Reset Password
+POST /api/v1/auth/reset-password
+Change Password
+PUT /api/v1/auth/change-password
+
+16. Database Tables
+users
+id 
+dealer_id 
+role_id 
+username 
+email 
+password 
+mobile 
+status 
+last_login 
+created_at 
+updated_at 
+roles
+id 
+role_name 
+description 
+permissions
+id 
+permission_name 
+role_permissions
+role_id 
+permission_id 
+user_sessions
+session_id 
+refresh_token 
+ip_address 
+device 
+login_time 
+logout_time 
+password_reset_tokens
+user_id 
+otp 
+expiry_time 
+login_audit_logs
+user_id 
+action 
+ip_address 
+browser 
+timestamp 
+
+17. Security Rules
+BCrypt password hashing. 
+HTTPS only. 
+JWT validation on every request. 
+Refresh token rotation. 
+Dealer data isolation. 
+Account locking after 5 failed attempts. 
+Password history check (last 5 passwords cannot be reused). 
+Session timeout after inactivity (configurable). 
+
+18. Audit Logs
+Record:
+Login 
+Logout 
+Failed Login 
+Password Change 
+Password Reset 
+Account Lock 
+Account Unlock 
+Session Expired 
+Fields
+User 
+Dealer 
+IP Address 
+Browser 
+Device 
+Timestamp 
+Action 
+
+19. Exception Handling
+Error
+HTTP
+Invalid Credentials
+401
+Invalid Token
+401
+Token Expired
+401
+Access Denied
+403
+User Not Found
+404
+Validation Failed
+400
+Server Error
+500
+
+20. Edge Cases
+User logs in from multiple devices. 
+Refresh token expires. 
+Dealer subscription expires during an active session. 
+Password reset requested multiple times. 
+OTP expires before verification. 
+Internet disconnects during login. 
+User account is deactivated while logged in. 
+Simultaneous login attempts. 
+
+21. Acceptance Criteria
+Secure login using JWT. 
+Refresh token mechanism works. 
+Password reset flow works. 
+OTP verification works. 
+Session management functions correctly. 
+RBAC enforced across all APIs. 
+Dealer isolation maintained. 
+Audit logs created for every authentication event. 
+Security rules enforced. 
+
+Module 02 – Subscription Management
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: © SoftEdgeX Technologies. All Rights Reserved.
+
+1. Module Overview
+Purpose
+The Subscription Management module controls dealer subscriptions, feature availability, plan duration, expiry, renewals, and access restrictions.
+This module determines what features a dealer can use based on the purchased subscription.
+This module does not handle payments. Payment processing is handled separately in Module 03.
+
+2. Business Objectives
+The system should:
+Allow dealers to subscribe to plans. 
+Control feature access. 
+Track subscription validity. 
+Prevent unauthorized usage after expiry. 
+Notify dealers before expiry. 
+Support future plan upgrades. 
+Allow Super Admin to manage plans. 
+
+3. User Roles
+Role
+Access
+Super Admin
+Full
+Dealer Admin
+Own Subscription Only
+Staff
+No Access
+
+4. Subscription Plans
+The application contains four plans.
+Starter
+Duration
+1 Month
+Price
+₹2,000
+
+Standard
+Duration
+3 Months
+Price
+₹5,500
+
+Professional
+Duration
+6 Months
+Price
+₹11,000
+
+Enterprise
+Duration
+12 Months
+Price
+₹20,000
+
+5. Plan Details
+Each plan stores:
+Plan ID 
+Plan Name 
+Duration 
+Price 
+Maximum Staff 
+Maximum Storage 
+Maximum Farmers (Optional) 
+Maximum Products (Optional) 
+Maximum Documents 
+Status 
+Created Date 
+Updated Date 
+
+6. Subscription Lifecycle
+Dealer Registration↓Free Trial (Optional)↓Purchase Plan↓Subscription Activated↓Active↓Renewal Reminder↓Renew Subscription↓ContinueORExpired↓Grace Period↓Account Suspended
+
+7. Subscription Status
+Possible values:
+ACTIVE
+Subscription is valid.
+
+PENDING
+Payment not completed.
+
+EXPIRED
+Subscription completed.
+Business modules blocked.
+
+SUSPENDED
+Disabled manually by Super Admin.
+
+CANCELLED
+Dealer permanently cancelled.
+
+TRIAL
+Dealer using trial version.
+
+8. Subscription Activation
+Preconditions
+Dealer Account
+Must Exist
+Dealer Status
+ACTIVE
+Payment
+Successful
+
+Workflow
+Dealer Purchases Plan
+↓
+Subscription Created
+↓
+Start Date Saved
+↓
+End Date Calculated
+↓
+Status
+ACTIVE
+↓
+Features Enabled
+↓
+Dealer Redirected Dashboard
+
+9. Subscription Renewal
+Dealer can renew
+Any time before expiry.
+New expiry
+Calculated
+from current expiry date.
+Example
+Current Expiry
+30 July
+Renew
+12 Month Plan
+New Expiry
+30 July Next Year
+
+10. Grace Period
+Grace Period
+7 Days
+During Grace Period
+Dealer can
+Login
+View Dashboard
+Renew Plan
+Cannot
+Create Sales
+Create Bills
+Add Products
+Add Farmers
+
+11. Expiry Reminder
+Automatic reminders
+30 Days Before
+15 Days Before
+7 Days Before
+3 Days Before
+1 Day Before
+Expiry Day
+After Expiry
+Every Day
+Until Renewal
+
+Channels
+WhatsApp
+SMS
+Email
+
+12. Subscription Screen
+Dealer View
+Shows
+Current Plan
+Price
+Start Date
+End Date
+Remaining Days
+Renew Button
+Payment History
+Invoices
+Auto Renew Status
+
+13. Super Admin Screen
+Shows
+All Dealers
+Subscription Status
+Plan
+Renewal Date
+Expired Accounts
+Revenue
+Plan Distribution
+Renewal Rate
+
+Actions
+Activate
+Suspend
+Cancel
+Change Plan
+Extend Subscription
+
+14. Plan Upgrade
+Dealer
+1 Month
+↓
+Upgrade
+12 Months
+System
+Calculates Remaining Value
+↓
+Adjusts Price
+↓
+Creates New Subscription
+
+15. Plan Downgrade
+Allowed
+Only
+After Current Plan Expires.
+
+16. Feature Access
+Every request
+Checks
+Subscription
+Before processing.
+If
+Subscription
+Expired
+Return
+HTTP
+403
+Message
+Your subscription has expired.Please renew your subscription.
+
+17. Database Tables
+subscription_plans
+id 
+name 
+duration_months 
+price 
+max_staff 
+max_storage 
+max_documents 
+status 
+created_at 
+
+dealer_subscriptions
+id 
+dealer_id 
+plan_id 
+start_date 
+end_date 
+grace_end_date 
+status 
+auto_renew 
+created_at 
+
+subscription_history
+id 
+dealer_id 
+old_plan 
+new_plan 
+action 
+timestamp 
+
+18. APIs
+Get Plans
+GET /api/v1/subscriptions/plans
+
+Current Subscription
+GET /api/v1/subscriptions/current
+
+Renew Subscription
+POST /api/v1/subscriptions/renew
+
+Upgrade Plan
+POST /api/v1/subscriptions/upgrade
+
+Cancel Subscription
+POST /api/v1/subscriptions/cancel
+
+Extend Subscription (Super Admin)
+POST /api/v1/subscriptions/extend
+
+19. Validation Rules
+Plan
+Must Exist
+Dealer
+Must Exist
+Cannot
+Create Multiple Active Subscriptions
+Renewal
+Cannot
+Overlap
+Cancelled
+Cannot
+Reactivate
+Without New Subscription
+
+20. Notifications
+Send
+Plan Activated
+Plan Renewed
+Plan Expiring
+Plan Expired
+Plan Cancelled
+Plan Upgraded
+Plan Suspended
+
+21. Audit Logs
+Track
+Plan Purchase
+Renewal
+Upgrade
+Cancellation
+Suspension
+Extension
+
+22. Edge Cases
+Dealer renews before expiry.
+Dealer renews after expiry.
+Dealer upgrades.
+Super Admin extends manually.
+Subscription expires while logged in.
+Grace period expires.
+Dealer suspended manually.
+
+23. Acceptance Criteria
+✅ Dealer can purchase plans.
+✅ Subscription activates after successful payment.
+✅ Expiry date calculated correctly.
+✅ Feature access controlled.
+✅ Renewal reminders sent.
+✅ Grace period enforced.
+✅ Super Admin manages all subscriptions.
+✅ Dealer sees only their own subscription.
+
+
+
+Module 03 – Payment Management
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: © SoftEdgeX Technologies. All Rights Reserved.
+
+1. Module Overview
+Purpose
+The Payment Management module is responsible for processing subscription payments, maintaining payment history, generating invoices, handling renewals, supporting auto-debit, processing webhooks, and updating subscription status after successful payments.
+This module never decides which features a dealer can access. It only handles payment transactions.
+
+2. Business Objectives
+The system shall:
+Accept online payments. 
+Support multiple payment gateways. 
+Generate payment receipts. 
+Activate subscriptions automatically after successful payment. 
+Support auto-renew. 
+Handle failed payments. 
+Store complete payment history. 
+Generate GST invoices. 
+
+3. Supported Payment Gateways
+Version 1
+Razorpay 
+Future
+Cashfree 
+PhonePe 
+Stripe 
+The system must use a Payment Gateway Abstraction Layer.
+Business logic must never depend directly on Razorpay APIs.
+
+4. User Roles
+Role
+Permission
+Super Admin
+Full Access
+Dealer Admin
+Own Payments
+Staff
+No Access
+
+5. Payment Flow
+Dealer selects Plan↓Click Proceed To Payment↓Create Payment Order↓Redirect Gateway↓Dealer Pays↓Gateway Response↓Webhook Verification↓Update Payment Status↓Activate Subscription↓Generate Invoice↓Send WhatsApp↓Send Email↓Payment Completed
+
+6. Payment Methods
+Supported
+UPI 
+Credit Card 
+Debit Card 
+Net Banking 
+Wallet 
+EMI (Future) 
+
+7. Payment Status
+Possible Status
+PENDING
+SUCCESS
+FAILED
+CANCELLED
+REFUNDED
+PROCESSING
+
+8. Purchase Subscription
+Dealer
+Clicks
+Buy Plan
+↓
+System
+Creates Order
+↓
+Generates
+Order ID
+↓
+Stores
+Pending Payment
+↓
+Redirects Razorpay
+
+9. Successful Payment
+Gateway
+Returns Success
+↓
+Verify Signature
+↓
+Update Payment
+↓
+Activate Subscription
+↓
+Generate GST Invoice
+↓
+Create Audit Log
+↓
+Notify Dealer
+
+10. Failed Payment
+Gateway
+Returns Failed
+↓
+Update Status
+FAILED
+↓
+Notify Dealer
+↓
+Allow Retry
+
+11. Cancelled Payment
+Dealer closes payment page.
+Status
+CANCELLED
+Dealer may retry anytime.
+
+12. Auto Debit (Auto Renewal)
+Dealer enables
+Auto Renew
+During Purchase.
+Store
+Gateway Subscription ID
+(Not card details.)
+Before expiry
+Gateway automatically charges dealer.
+If Success
+Renew Subscription
+Generate Invoice
+Notify Dealer
+If Failed
+Retry according to gateway policy.
+After retries fail
+Move to Grace Period.
+
+13. Payment History Screen
+Dealer View
+Columns
+Invoice Number 
+Order ID 
+Payment Date 
+Amount 
+Plan 
+Gateway 
+Status 
+Invoice 
+Receipt 
+Buttons
+Download Invoice 
+Download Receipt 
+
+14. Super Admin Payment Screen
+Displays
+Total Revenue 
+Today's Revenue 
+Monthly Revenue 
+Pending Payments 
+Failed Payments 
+Refunds 
+Filters
+Dealer 
+Plan 
+Date 
+Gateway 
+Status 
+Actions
+View Payment 
+Export Report 
+Initiate Refund (Manual) 
+
+15. GST Invoice
+Generated
+Automatically
+Contains
+Invoice Number 
+Dealer Name 
+GST Number 
+Plan 
+Amount 
+GST 
+Total 
+Payment Reference 
+Payment Date 
+Formats
+PDF
+
+16. Refund Management
+Only
+Super Admin
+Can
+Approve Refund
+Workflow
+Refund Requested
+↓
+Review
+↓
+Gateway Refund API
+↓
+Status Updated
+↓
+Dealer Notified
+
+17. Database Tables
+payments
+id 
+dealer_id 
+subscription_id 
+order_id 
+payment_id 
+gateway 
+amount 
+gst 
+total_amount 
+status 
+payment_method 
+payment_date 
+created_at 
+
+payment_gateway_logs
+id 
+payment_id 
+request 
+response 
+status 
+created_at 
+
+invoices
+id 
+dealer_id 
+invoice_number 
+payment_id 
+amount 
+gst 
+pdf_path 
+
+refunds
+id 
+payment_id 
+refund_amount 
+reason 
+status 
+
+18. APIs
+Create Order
+POST /api/v1/payments/order
+Verify Payment
+POST /api/v1/payments/verify
+Payment Webhook
+POST /api/v1/payments/webhook
+Payment History
+GET /api/v1/payments/history
+Download Invoice
+GET /api/v1/payments/invoice/{id}
+Refund
+POST /api/v1/payments/refund
+
+19. Validation Rules
+Dealer must exist. 
+Subscription Plan must exist. 
+Amount must match plan price. 
+Payment signature must be verified. 
+Duplicate payment IDs not allowed. 
+Payment cannot activate an already active subscription. 
+
+20. Notifications
+Send automatically
+Payment Successful 
+Payment Failed 
+Payment Refunded 
+Invoice Generated 
+Subscription Activated 
+Auto Renewal Success 
+Auto Renewal Failed 
+Channels
+WhatsApp 
+SMS 
+Email 
+
+21. Audit Logs
+Track
+Order Created 
+Payment Success 
+Payment Failure 
+Refund 
+Invoice Download 
+Auto Renewal 
+Gateway Callback 
+
+22. Security
+Verify webhook signatures. 
+Never store card details. 
+Encrypt gateway tokens. 
+HTTPS mandatory. 
+Validate payment amount before activation. 
+Prevent duplicate webhook processing using idempotency. 
+
+23. Edge Cases
+Dealer refreshes payment page. 
+Payment succeeds but browser closes. 
+Duplicate webhook received. 
+Gateway timeout. 
+Refund after subscription activation. 
+Auto-renew fails due to insufficient balance. 
+Payment captured twice by mistake. 
+
+24. Acceptance Criteria
+✅ Dealer can purchase a subscription.
+✅ Secure payment processing.
+✅ Subscription activates only after verified payment.
+✅ GST invoice generated automatically.
+✅ Payment history maintained.
+✅ Auto-renew works correctly.
+✅ Refunds processed securely.
+✅ Notifications sent for all payment events.
+
+
+
+25. Coupon & Referral Management
+Purpose
+The Coupon & Referral module helps SoftEdgeX Technologies attract new dealers, increase renewals, and run promotional campaigns.
+Only Super Admin can create and manage coupons and referral programs.
+
+25.1 Coupon Types
+Percentage Discount
+Example
+10% OFF
+20% OFF
+Maximum Discount
+₹5,000
+
+Fixed Discount
+Example
+₹500 OFF
+₹1,000 OFF
+₹2,000 OFF
+
+Free Trial Coupon
+Example
+15 Days Free
+30 Days Free
+
+Extension Coupon
+Instead of reducing price
+Increase Subscription
+Example
+Buy 12 Months
+Get 1 Month Extra
+
+25.2 Coupon Fields
+Field
+Description
+Coupon Code
+Unique Code
+Coupon Name
+Display Name
+Coupon Type
+Percentage / Fixed / Extension
+Discount Value
+Discount Amount
+Maximum Discount
+Optional
+Valid From
+Start Date
+Valid Till
+End Date
+Usage Limit
+Total Usage
+Per Dealer Limit
+Usage per Dealer
+Minimum Purchase Amount
+Eligibility
+Applicable Plans
+Plans Supported
+Status
+Active / Inactive
+
+25.3 Coupon Workflow
+Dealer Selects Plan↓Enter Coupon Code↓Validate Coupon↓Check Expiry↓Check Usage Limit↓Calculate Discount↓Show Final Amount↓Proceed To Payment
+
+25.4 Validation Rules
+Coupon Exists
+↓
+Coupon Active
+↓
+Not Expired
+↓
+Usage Available
+↓
+Plan Eligible
+↓
+Dealer Eligible
+↓
+Apply Discount
+
+25.5 Invalid Coupon Messages
+Invalid Coupon Code
+Coupon Expired
+Usage Limit Exceeded
+Coupon Not Applicable For Selected Plan
+
+25.6 Referral Program
+Every Dealer receives
+Referral Code
+Example
+RAHUL2026
+
+Dealer Shares Referral Code
+↓
+New Dealer Registers
+↓
+Uses Referral Code
+↓
+Successful Payment
+↓
+Referral Reward Generated
+
+25.7 Referral Rewards
+Example
+Current Reward
+₹500 Wallet Credit
+OR
+1 Month Free Extension
+OR
+10% Renewal Discount
+Reward configuration is managed by Super Admin.
+
+25.8 Referral Rules
+Referrer must have an ACTIVE subscription. 
+Reward is granted only after the new dealer successfully pays. 
+Self-referrals are not allowed. 
+Referral code cannot be changed after creation. 
+Referral rewards are non-transferable. 
+
+25.9 Super Admin Features
+Super Admin can:
+Create Coupons 
+Edit Coupons 
+Disable Coupons 
+View Coupon Usage 
+View Referral Statistics 
+Configure Referral Rewards 
+Export Coupon Reports 
+
+25.10 Dealer Screen
+Dealer can view:
+Available Coupons 
+Applied Coupon 
+Discount Amount 
+Referral Code 
+Referral Earnings 
+Referral History 
+
+25.11 Database Tables
+coupons
+id 
+code 
+name 
+type 
+discount_value 
+max_discount 
+valid_from 
+valid_to 
+usage_limit 
+used_count 
+status 
+
+coupon_usage
+id 
+coupon_id 
+dealer_id 
+payment_id 
+discount_amount 
+used_at 
+
+dealer_referrals
+id 
+referrer_dealer_id 
+referred_dealer_id 
+referral_code 
+reward_type 
+reward_value 
+status 
+rewarded_at 
+
+25.12 APIs
+GET /api/v1/coupons
+POST /api/v1/coupons/apply
+POST /api/v1/referrals/validate
+GET /api/v1/referrals/history
+
+25.13 Notifications
+Send:
+Coupon Applied 
+Coupon Expired 
+Referral Registered 
+Referral Reward Earned 
+Channels:
+WhatsApp 
+Email 
+SMS 
+
+25.14 Audit Logs
+Track:
+Coupon Created 
+Coupon Updated 
+Coupon Applied 
+Coupon Removed 
+Referral Registered 
+Referral Reward Issued 
+
+25.15 Acceptance Criteria
+Coupon validation works correctly. 
+Discounts are calculated accurately. 
+Referral rewards are issued only after successful payment. 
+Invalid coupons are rejected with clear messages. 
+Coupon usage limits are enforced. 
+Referral history is maintained. 
+Super Admin can manage all coupon and referral configurations. 
+
+
+
+MODULE 04 – Dashboard
+1. Module Overview
+Purpose
+The Dashboard is the first screen displayed after successful login. It provides users with a real-time overview of their business based on their assigned role.
+The dashboard must display only relevant information according to the logged-in user's role and permissions.
+
+2. Dashboard Types
+The application supports three dashboard types.
+Dashboard
+User
+Super Admin Dashboard
+Software Owner
+Dealer Admin Dashboard
+Fertilizer Dealer
+Staff Dashboard
+Dealer Staff
+
+3. Super Admin Dashboard
+Purpose
+Provides a complete overview of the SoftEdgeX AgriSuite platform.
+Only the software owner can access this dashboard.
+
+Dashboard Cards
+Display
+Total Registered Dealers 
+Active Dealers 
+Expired Subscriptions 
+Trial Accounts 
+Monthly Revenue 
+Annual Revenue 
+Pending Payments 
+Failed Payments 
+Refund Requests 
+Total Farmers 
+Total Products 
+Total Invoices 
+Total WhatsApp Messages 
+Total SMS Sent 
+
+Charts
+Revenue Trend
+Shows
+Daily
+Weekly
+Monthly
+Yearly Revenue
+
+Subscription Distribution
+Pie Chart
+Example
+1 Month      25%3 Months     30%6 Months     20%12 Months    25%
+
+Dealer Growth
+Graph
+Shows
+New Dealer Registrations
+Month Wise
+
+Payment Status
+Donut Chart
+Shows
+Success
+Failed
+Pending
+Refunded
+
+Plan Distribution
+Shows
+How many dealers are using
+Starter 
+Standard 
+Professional 
+Enterprise 
+
+Recent Activities
+Shows
+New Dealer Registered 
+Subscription Renewed 
+Payment Failed 
+Dealer Suspended 
+Coupon Used 
+Referral Earned 
+
+Quick Actions
+Buttons
+Add Dealer 
+Create Coupon 
+Send Announcement 
+View Payments 
+Manage Plans 
+Export Reports 
+
+Notifications
+Shows
+Subscriptions Expiring Today 
+Failed Auto Renewals 
+Pending Refunds 
+System Alerts 
+Backup Failures 
+
+4. Dealer Admin Dashboard
+Purpose
+Shows complete business performance for a single dealer.
+
+Dashboard Cards
+Display
+Today's Sales
+Monthly Sales
+Outstanding Credit
+Today's Collections
+Total Farmers
+Total Products
+Low Stock Products
+Expiring Products
+Subscription Status
+Remaining Subscription Days
+Pending Visits
+Unread Notifications
+
+Sales Charts
+Daily Sales
+Weekly Sales
+Monthly Sales
+Yearly Sales
+
+Product Charts
+Top Selling Products
+Least Selling Products
+Category Wise Sales
+
+Farmer Charts
+New Farmers This Month
+Repeat Customers
+Inactive Farmers
+Village Wise Distribution
+
+Credit Charts
+Total Credit Given
+Credit Recovered
+Pending Credit
+Overdue Accounts
+
+Inventory Charts
+Low Stock
+Out of Stock
+Expiring Stock
+Fast Moving Products
+
+Today's Tasks
+Shows
+Pending Payments
+Scheduled Visits
+Follow-up Calls
+Delivery Pending
+Bills Pending
+
+Quick Actions
+Buttons
+Add Farmer
+Create Invoice
+Receive Payment
+Add Product
+Record Visit
+Renew Subscription
+
+Notification Widget
+Displays
+Payment Due
+Subscription Reminder
+Low Stock
+Product Expiry
+Upcoming Visits
+
+5. Staff Dashboard
+Purpose
+Displays only information relevant to assigned work.
+
+Cards
+Today's Sales
+Assigned Farmers
+Today's Visits
+Pending Collections
+Completed Tasks
+Remaining Tasks
+
+Quick Actions
+Create Sale
+Receive Payment
+Add Visit
+View Assigned Farmers
+Search Farmer
+
+Recent Activities
+Shows
+Today's Work
+Yesterday's Work
+Weekly Performance
+
+Performance Metrics
+Total Sales
+Collections
+Visits Completed
+Target Achievement
+
+6. Dashboard Refresh
+Dashboard refreshes automatically every 60 seconds.
+Manual Refresh button available.
+
+7. Role-Based Visibility
+Widget
+Super Admin
+Dealer Admin
+Staff
+Revenue
+✅
+Shop Only
+❌
+Dealers
+✅
+❌
+❌
+Farmers
+All
+Own
+Assigned
+Products
+All
+Own
+View
+Subscription
+All
+Own
+❌
+Payments
+All
+Own
+View
+Visits
+All
+Own
+Assigned
+Reports
+All
+Own
+Limited
+
+
+
+
+
+
+
+
+
+
+
+
+Module 05 – Dealer Management
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: © SoftEdgeX Technologies. All Rights Reserved.
+
+1. Module Overview
+Purpose
+The Dealer Management module manages all fertilizer dealers registered on the SoftEdgeX AgriSuite platform.
+Each dealer is an independent tenant. Their data is completely isolated from other dealers.
+Only Super Admin can create, edit, suspend, activate, or delete dealer accounts.
+Dealer Admin can only view and update their own business profile.
+
+2. Business Objectives
+The module shall:
+Register new dealers. 
+Maintain dealer business information. 
+Support multi-tenant architecture. 
+Track dealer subscription status. 
+Manage dealer lifecycle. 
+Prevent cross-dealer data access. 
+
+3. User Roles
+Role
+Permission
+Super Admin
+Full Access
+Dealer Admin
+View & Edit Own Profile
+Staff
+No Access
+
+4. Dealer Registration
+Purpose
+Register a new fertilizer dealer on the platform.
+
+Navigation
+Super Admin      ↓Dealer Management      ↓Add Dealer      ↓Enter Details      ↓Create Dealer      ↓Subscription Selection      ↓Dealer Activated
+
+5. Dealer Registration Form
+Business Details
+Field
+Required
+Business Name
+Yes
+Owner Name
+Yes
+GST Number
+Optional
+PAN Number
+Optional
+Shop License Number
+Optional
+
+Contact Details
+Field
+Required
+Mobile Number
+Yes
+Alternate Mobile
+No
+Email
+Yes
+Website
+No
+
+Address Details
+Field
+Required
+Shop Address
+Yes
+Village
+Yes
+Taluka
+Yes
+District
+Yes
+State
+Yes
+PIN Code
+Yes
+
+Business Settings
+Field
+Required
+Time Zone
+Yes
+Currency
+Yes
+Language
+Yes
+Financial Year
+Yes
+Default Values
+Time Zone → Asia/Kolkata 
+Currency → INR 
+Language → English 
+Financial Year → April–March 
+
+6. Validation Rules
+Business Name
+Required 
+Maximum 150 characters 
+Email
+Must be unique 
+Mobile
+Exactly 10 digits 
+Must be unique 
+GST
+Validate GST format if provided 
+PIN Code
+Exactly 6 digits 
+
+7. Dealer Creation Workflow
+Click Add Dealer↓Validate Input↓Check Duplicate Email↓Check Duplicate Mobile↓Create Dealer Record↓Generate Dealer Code↓Create Dealer Admin↓Assign Subscription↓Create Default Settings↓Create Audit Log↓Send Welcome Email↓Dealer Activated
+
+8. Dealer Profile
+Displays:
+Business Information 
+Owner Details 
+Contact Details 
+Address 
+Subscription 
+GST Details 
+Staff Count 
+Farmer Count 
+Product Count 
+Storage Usage 
+Registration Date 
+Last Login 
+
+9. Dealer Status
+Possible values:
+ACTIVE 
+INACTIVE 
+SUSPENDED 
+TRIAL 
+EXPIRED 
+Only ACTIVE dealers can use business modules.
+
+10. Dealer List
+Columns
+Dealer Code 
+Business Name 
+Owner Name 
+Mobile 
+Subscription Plan 
+Subscription Expiry 
+Status 
+Last Login 
+
+Filters
+Business Name 
+District 
+Subscription Plan 
+Status 
+Registration Date 
+
+11. Dealer Actions
+Super Admin
+Can:
+View 
+Edit 
+Suspend 
+Activate 
+Extend Subscription 
+Change Plan 
+Reset Dealer Password 
+View Dealer Login History 
+Export Dealer Data 
+Cannot delete dealers with business transactions. Instead, mark them as INACTIVE.
+
+12. Dealer Admin Profile
+Dealer Admin can update:
+Shop Address 
+Mobile Number 
+Logo 
+Business Hours 
+GST Details 
+Email 
+Cannot update:
+Dealer Code 
+Subscription Plan 
+Subscription Expiry 
+Registered Email (without verification) 
+
+13. Business Logo
+Dealer can upload:
+Formats
+JPG 
+PNG 
+WEBP 
+Maximum Size
+2 MB
+Storage
+AWS S3
+Used in:
+Invoices 
+Reports 
+Dashboard 
+
+14. Dealer Code Generation
+System generates a unique code.
+Example
+DLR000001DLR000002DLR000003
+Dealer Code is permanent.
+
+15. Database Tables
+dealers
+id 
+dealer_code 
+business_name 
+owner_name 
+gst_number 
+pan_number 
+email 
+mobile 
+address 
+village 
+taluka 
+district 
+state 
+pin_code 
+logo_url 
+status 
+created_at 
+updated_at 
+
+dealer_settings
+dealer_id 
+language 
+currency 
+timezone 
+financial_year 
+date_format 
+business_hours 
+
+16. REST APIs
+Create Dealer
+POST /api/v1/dealers
+Get Dealers
+GET /api/v1/dealers
+Get Dealer
+GET /api/v1/dealers/{id}
+Update Dealer
+PUT /api/v1/dealers/{id}
+Suspend Dealer
+PUT /api/v1/dealers/{id}/suspend
+Activate Dealer
+PUT /api/v1/dealers/{id}/activate
+Upload Logo
+POST /api/v1/dealers/logo
+
+17. Notifications
+Automatically send:
+Welcome Email 
+Account Activated 
+Account Suspended 
+Subscription Assigned 
+Profile Updated 
+Channels
+Email 
+WhatsApp 
+SMS 
+
+18. Audit Logs
+Track:
+Dealer Created 
+Dealer Updated 
+Dealer Suspended 
+Dealer Activated 
+Subscription Changed 
+Logo Updated 
+Business Profile Updated 
+
+19. Security
+Dealer data isolation using dealer_id. 
+Logo uploads validated for file type and size. 
+Only Super Admin can create dealers. 
+Dealer Admin cannot access another dealer's profile. 
+All changes recorded in audit logs. 
+
+20. Edge Cases
+Duplicate business email. 
+Duplicate mobile number. 
+GST number already used. 
+Dealer suspended while users are logged in. 
+Logo upload fails. 
+Dealer has expired subscription. 
+Dealer profile updated during active sessions. 
+
+21. Acceptance Criteria
+✅ Super Admin can register a new dealer.
+✅ Dealer receives login credentials.
+✅ Dealer Admin can update only allowed fields.
+✅ Dealer data is isolated.
+✅ Dealer status controls access.
+✅ Business logo appears on invoices and reports.
+✅ All dealer actions are audited.
+
+
+
+
+
+
+
+
+
+
+
+
+
+Module 06 – Staff Management
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: © SoftEdgeX Technologies. All Rights Reserved.
+
+1. Module Overview
+Purpose
+The Staff Management module allows a Dealer Admin to manage employees working in the fertilizer business.
+Each staff member receives an individual login account with configurable permissions. Staff can access only the modules assigned by the Dealer Admin.
+This module improves accountability, security, and operational efficiency by ensuring every action is linked to a specific employee.
+
+2. Business Objectives
+The module shall:
+Create staff accounts. 
+Assign role-based permissions. 
+Track employee activities. 
+Manage departments and designations. 
+Control login access. 
+Support future attendance and payroll integration. 
+Maintain staff performance records. 
+
+3. User Roles
+Role
+Access
+Super Admin
+View All Dealers' Staff
+Dealer Admin
+Full Access
+Staff
+Own Profile Only
+
+4. Staff Categories
+Dealer can create any category.
+Examples
+Sales Executive 
+Store Manager 
+Inventory Manager 
+Cashier 
+Accountant 
+Field Officer 
+Delivery Executive 
+Customer Support 
+
+5. Staff Registration
+Navigation
+Dashboard↓Staff Management↓Add Staff↓Enter Details↓Assign Role↓Assign Permissions↓Save↓Generate Login↓Send Credentials
+
+6. Add Staff Screen
+Personal Information
+Field
+Required
+Employee ID
+Auto
+First Name
+Yes
+Last Name
+Yes
+Gender
+Yes
+Date of Birth
+Yes
+Mobile Number
+Yes
+Alternate Mobile
+No
+Email
+Yes
+Aadhaar Number
+Optional
+PAN Number
+Optional
+
+Employment Information
+Field
+Required
+Department
+Yes
+Designation
+Yes
+Joining Date
+Yes
+Employee Type
+Yes
+Salary
+Optional
+Shift
+Yes
+Reporting Manager
+Optional
+Employee Types
+Full Time 
+Part Time 
+Contract 
+Temporary 
+
+Address
+Address 
+Village 
+Taluka 
+District 
+State 
+PIN Code 
+
+7. Login Information
+Auto Generated
+Employee Code
+Example
+EMP000001
+Username
+Generated automatically
+Temporary Password
+Generated automatically
+Dealer can change manually.
+
+8. Permission Assignment
+Dealer Admin selects permissions.
+Example
+Farmer Module
+✓ View
+✓ Create
+✓ Update
+✗ Delete
+
+Product Module
+✓ View
+✓ Create
+✓ Update
+✗ Delete
+
+Inventory
+✓ View
+✓ Add Stock
+✓ Remove Stock
+✗ Delete Entries
+
+Sales
+✓ Create Invoice
+✓ Print Invoice
+✓ Receive Payment
+✗ Cancel Invoice
+
+Reports
+✓ View Sales Report
+✗ Export
+
+9. Permission Templates
+Dealer can create templates.
+Example
+Sales Executive
+Permissions
+Sales 
+Farmer 
+Visits 
+
+Inventory Manager
+Permissions
+Inventory 
+Products 
+Supplier 
+
+Accountant
+Permissions
+Payment 
+Credit 
+Reports 
+
+Templates reduce manual configuration.
+
+10. Staff Status
+Possible Status
+ACTIVE
+INACTIVE
+ON_LEAVE
+SUSPENDED
+RESIGNED
+TERMINATED
+
+11. Staff Profile
+Displays
+Personal Details
+↓
+Employment Details
+↓
+Permissions
+↓
+Activity Logs
+↓
+Sales Performance
+↓
+Visit History
+↓
+Assigned Farmers
+↓
+Password Reset
+
+12. Staff List
+Columns
+Employee Code
+Employee Name
+Department
+Designation
+Mobile
+Status
+Joining Date
+Last Login
+Actions
+View
+Edit
+Suspend
+Reset Password
+Deactivate
+Delete (Soft Delete)
+
+13. Shift Management
+Dealer defines shifts.
+Example
+Morning
+9 AM – 5 PM
+Evening
+1 PM – 9 PM
+General
+10 AM – 6 PM
+Future
+Attendance Integration
+
+14. Login Restrictions
+Dealer can configure
+Office Hours Login
+Allowed Devices
+Maximum Sessions
+IP Restriction (Future)
+Example
+Sales Executive
+Allowed
+9 AM – 8 PM
+
+15. Staff Performance
+Automatically calculated.
+Shows
+Today's Sales
+Monthly Sales
+Invoices Created
+Payments Collected
+Visits Completed
+Farmers Added
+Products Added
+Average Response Time
+
+16. Assigned Farmers
+Dealer can assign farmers.
+Benefits
+Better follow-up 
+Accountability 
+Visit planning 
+One farmer can have one primary staff member.
+
+17. Activity Tracking
+Every action is recorded.
+Examples
+Farmer Added 
+Invoice Created 
+Stock Updated 
+Payment Received 
+Credit Updated 
+Login 
+Logout 
+
+18. Notifications
+Dealer receives notification when
+Staff Login 
+Failed Login 
+New Staff Created 
+Password Reset 
+Staff Suspended 
+Employee Resigned 
+Staff receives
+Welcome Message 
+Login Credentials 
+Password Changed 
+New Task Assigned 
+Channels
+Email 
+WhatsApp 
+SMS 
+
+19. Database Tables
+staff
+id 
+dealer_id 
+employee_code 
+first_name 
+last_name 
+email 
+mobile 
+department 
+designation 
+joining_date 
+shift_id 
+status 
+created_at 
+
+departments
+id 
+name 
+Examples
+Sales
+Inventory
+Accounts
+Administration
+
+shifts
+id 
+shift_name 
+start_time 
+end_time 
+
+staff_permissions
+id 
+staff_id 
+permission_id 
+
+permission_templates
+id 
+dealer_id 
+template_name 
+
+staff_activity_logs
+id 
+staff_id 
+activity 
+module 
+timestamp 
+
+20. REST APIs
+Create Staff
+POST /api/v1/staff
+Update Staff
+PUT /api/v1/staff/{id}
+Get Staff
+GET /api/v1/staff
+Get Staff Details
+GET /api/v1/staff/{id}
+Suspend Staff
+PUT /api/v1/staff/{id}/suspend
+Reset Password
+PUT /api/v1/staff/{id}/reset-password
+Assign Permissions
+POST /api/v1/staff/{id}/permissions
+Assign Farmers
+POST /api/v1/staff/{id}/farmers
+
+21. Validation Rules
+Mobile number must be unique within the dealer. 
+Email must be unique within the dealer. 
+Joining date cannot be in the future. 
+Employee code is auto-generated and immutable. 
+Staff cannot delete their own account. 
+Dealer cannot exceed the staff limit defined by the active subscription plan. 
+
+22. Security
+Staff can access only assigned modules. 
+Every API validates dealer_id. 
+Staff cannot access another dealer's data. 
+Dealer Admin cannot modify Super Admin accounts. 
+Sensitive information (salary, PAN, Aadhaar) is encrypted at rest. 
+
+23. Audit Logs
+Track:
+Staff Created 
+Staff Updated 
+Permission Changed 
+Password Reset 
+Status Changed 
+Shift Changed 
+Farmer Assignment 
+Login / Logout 
+
+24. Edge Cases
+Dealer reaches maximum staff limit. 
+Staff account suspended during active session. 
+Duplicate mobile/email. 
+Staff resigns while assigned to farmers. 
+Dealer deletes a permission template. 
+Temporary password expires before first login. 
+
+25. Acceptance Criteria
+✅ Dealer Admin can create staff.
+✅ Staff receives login credentials.
+✅ Permission templates work correctly.
+✅ Module-level permissions are enforced.
+✅ Staff activity is fully tracked.
+✅ Assigned farmer mapping works.
+✅ Staff limits follow the dealer's subscription.
+✅ All staff actions generate audit logs.
+
+26. Future Enhancements (Version 2.0)
+Attendance Management 
+Leave Management 
+Payroll 
+Biometric Integration 
+GPS-based Attendance 
+Task Management 
+Performance Scorecards 
+Incentive & Commission Tracking 
+Employee Document Vault 
+Digital ID Cards 
+Module 07 – Farmer Management
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: © SoftEdgeX Technologies. All Rights Reserved.
+
+1. Module Overview
+Purpose
+The Farmer Management module is the heart of SoftEdgeX AgriSuite. It maintains a complete digital profile of every farmer, including personal information, farming details, purchase history, credit history, visit records, documents, communication history, and business interactions.
+Every business transaction in the system references a farmer.
+Integrated Modules
+Sales & Billing 
+Credit Management 
+Visit Tracking 
+Notification System 
+Reports 
+Crop Advisory 
+Document Management 
+
+2. Business Objectives
+The system shall:
+Maintain farmer records digitally. 
+Eliminate manual registers. 
+Track complete purchase history. 
+Track outstanding credit. 
+Store land and crop information. 
+Improve customer relationships. 
+Enable personalized recommendations. 
+Support thousands of farmer records. 
+
+3. User Roles
+Role
+Permission
+Super Admin
+View All Dealers
+Dealer Admin
+Full Access
+Staff
+Permission Based
+
+4. Navigation
+Dashboard↓Farmer Management↓Farmer List↓Farmer Profile↓Purchase History↓Credit History↓Visit History↓Documents↓Notes↓Communication History
+
+5. Farmer Registration
+Screen
+Personal Details
+Field
+Required
+Farmer ID
+Auto
+First Name
+Yes
+Last Name
+Yes
+Mobile Number
+Yes
+Alternate Number
+No
+Aadhaar Number
+Optional
+Date of Birth
+No
+Gender
+Yes
+
+Address
+Field
+Required
+House Address
+No
+Village
+Yes
+Taluka
+Yes
+District
+Yes
+State
+Yes
+PIN Code
+Yes
+
+Agricultural Details
+Field
+Required
+Farm Size
+Yes
+Unit (Acre/Hectare)
+Yes
+Soil Type
+Yes
+Irrigation Type
+Yes
+Water Source
+No
+Primary Crop
+Yes
+Secondary Crop
+No
+Crop Season
+Yes
+
+Business Details
+Field
+Required
+Farmer Category
+Yes
+Preferred Language
+Yes
+Payment Preference
+Yes
+Credit Allowed
+Yes
+Credit Limit
+Optional
+Farmer Category
+Small 
+Medium 
+Large 
+Payment Preference
+Cash 
+UPI 
+Credit 
+
+6. Farmer Code
+Auto Generated
+Example
+FRM000001FRM000002FRM000003
+Farmer Code never changes.
+
+7. Validation Rules
+Mobile
+Required 
+Unique within dealer 
+10 digits 
+Farm Size
+Greater than zero 
+Village
+Must exist in Master Data 
+Credit Limit
+Cannot be negative 
+
+8. Farmer List
+Columns
+Farmer Code 
+Name 
+Mobile 
+Village 
+Crop 
+Outstanding Credit 
+Last Purchase 
+Last Visit 
+Status 
+
+Filters
+Village 
+Crop 
+Credit Due 
+Staff Assigned 
+Active 
+Inactive 
+Recently Added 
+Search
+Name 
+Mobile 
+Farmer Code 
+
+9. Farmer Profile
+Tabs
+Overview
+Displays
+Personal Details 
+Farm Details 
+Current Crop 
+Soil 
+Outstanding Credit 
+Last Purchase 
+Last Visit 
+
+Purchase History
+Displays
+Invoice Number 
+Date 
+Products 
+Quantity 
+Amount 
+Clicking invoice opens full bill.
+
+Credit History
+Displays
+Total Credit 
+Paid Amount 
+Pending Amount 
+Due Date 
+Shows complete ledger.
+
+Visit History
+Displays
+Visit Date 
+Staff 
+Purpose 
+Observation 
+Recommendation 
+Images 
+
+Documents
+Upload
+Aadhaar 
+Land Record (7/12) 
+Soil Report 
+Crop Images 
+Stored in AWS S3.
+
+Notes
+Dealer can add private notes.
+Example
+Farmer prefers evening visits.Interested in organic farming.Usually purchases before monsoon.
+Notes are internal and never shared with the farmer.
+
+Communication History
+Shows
+WhatsApp Sent 
+SMS Sent 
+Email Sent 
+Call Notes (Manual Entry) 
+
+10. Assigned Staff
+Each farmer can have
+Primary Staff
+Secondary Staff (Optional)
+Benefits
+Follow-up 
+Accountability 
+Visit Planning 
+
+11. Family Details (Optional)
+Fields
+Spouse Name 
+Family Members 
+Emergency Contact 
+Useful for building long-term relationships.
+
+12. Farmer Status
+Possible values
+ACTIVE 
+INACTIVE 
+BLOCKED 
+DECEASED 
+Inactive farmers remain in history for reporting.
+
+13. Farmer Timeline
+A chronological activity feed.
+Example
+01 JanFarmer Created↓05 JanPurchased Urea↓20 JanCredit Given↓25 JanPayment Received↓10 FebVisit Completed↓15 FebSMS Reminder Sent
+
+14. Duplicate Detection
+System checks
+Mobile Number 
+Aadhaar (Optional) 
+If duplicate found
+Display existing record before allowing creation.
+
+15. REST APIs
+Create Farmer
+POST /api/v1/farmers
+Get Farmers
+GET /api/v1/farmers
+Search Farmers
+GET /api/v1/farmers/search
+Farmer Details
+GET /api/v1/farmers/{id}
+Update Farmer
+PUT /api/v1/farmers/{id}
+Deactivate Farmer
+PUT /api/v1/farmers/{id}/status
+Assign Staff
+PUT /api/v1/farmers/{id}/assign-staff
+
+16. Database Tables
+farmers
+id 
+dealer_id 
+farmer_code 
+first_name 
+last_name 
+mobile 
+alternate_mobile 
+aadhaar 
+gender 
+village 
+taluka 
+district 
+state 
+pin_code 
+farm_size 
+farm_unit 
+soil_type 
+irrigation_type 
+primary_crop 
+secondary_crop 
+preferred_language 
+payment_preference 
+credit_limit 
+status 
+
+farmer_documents
+id 
+farmer_id 
+document_type 
+document_url 
+
+farmer_notes
+id 
+farmer_id 
+note 
+created_by 
+
+farmer_staff_mapping
+farmer_id 
+staff_id 
+is_primary 
+
+farmer_activity
+farmer_id 
+activity_type 
+reference_id 
+created_at 
+
+17. Notifications
+Automatic notifications
+Birthday Greeting 
+Festival Greeting 
+Payment Reminder 
+Visit Reminder 
+Subscription Offers 
+Seasonal Promotions 
+Channels
+WhatsApp 
+SMS 
+Email 
+
+18. Audit Logs
+Track
+Farmer Created 
+Farmer Updated 
+Staff Assigned 
+Credit Limit Changed 
+Document Uploaded 
+Status Changed 
+Note Added 
+
+19. Security
+Farmers belong to only one dealer. 
+Staff sees only assigned farmers (optional configuration). 
+Documents require authenticated access. 
+Soft delete used instead of permanent deletion. 
+All APIs validate dealer_id. 
+
+20. Edge Cases
+Duplicate mobile registration. 
+Farmer changes mobile number. 
+Farmer moves to another village. 
+Multiple staff assigned simultaneously. 
+Credit limit reduced below outstanding balance. 
+Duplicate document upload. 
+Farmer marked inactive with pending credit. 
+
+21. Acceptance Criteria
+✅ Farmer registration completed successfully.
+✅ Duplicate farmers prevented.
+✅ Profile displays complete history.
+✅ Staff assignment works.
+✅ Purchase, credit, visit, and communication history are linked.
+✅ Documents upload successfully.
+✅ Timeline updates automatically.
+✅ All changes are audited.
+
+22. Future Enhancements (Version 2.0)
+GPS location of farm 
+QR Code for Farmer Profile 
+Digital Signature 
+Farmer Mobile App 
+AI-based Crop Advisory 
+AI Disease Detection 
+Voice Notes 
+Offline Data Synchronization
+
+
+
+Module 08 – Product Management
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: © SoftEdgeX Technologies. All Rights Reserved.
+
+1. Module Overview
+Purpose
+The Product Management module is responsible for managing all products sold by the fertilizer dealer, including fertilizers, pesticides, insecticides, fungicides, herbicides, seeds, micronutrients, growth promoters, agricultural tools, and other farming products.
+Every sale, purchase, inventory transaction, stock movement, and report references a product.
+
+2. Business Objectives
+The system shall:
+Maintain a centralized product catalog. 
+Organize products into categories. 
+Track pricing and GST. 
+Support multiple units of measurement. 
+Track product status. 
+Enable barcode support. 
+Maintain complete product history. 
+Integrate with inventory, purchases, and sales. 
+
+3. User Roles
+Role
+Permission
+Super Admin
+View All Dealers
+Dealer Admin
+Full Access
+Staff
+Permission Based
+
+4. Product Categories
+The system supports predefined and custom categories.
+Default Categories
+Fertilizers 
+Seeds 
+Pesticides 
+Insecticides 
+Fungicides 
+Herbicides 
+Micronutrients 
+Bio Fertilizers 
+Plant Growth Regulators 
+Agricultural Equipment 
+Irrigation Products 
+Others 
+Dealer can create additional categories.
+
+5. Product Brands
+Dealer can maintain brands.
+Examples
+UPL 
+Bayer 
+Syngenta 
+Coromandel 
+IFFCO 
+Rallis India 
+Tata Rallis 
+Custom Local Brands 
+
+6. Add Product
+Navigation
+Dashboard↓Product Management↓Add Product↓Save Product↓Inventory Ready
+
+7. Product Registration
+Basic Information
+Field
+Required
+Product Code
+Auto
+Product Name
+Yes
+Short Name
+No
+Brand
+Yes
+Category
+Yes
+Product Type
+Yes
+
+Inventory Information
+Field
+Required
+Unit
+Yes
+Opening Stock
+Yes
+Minimum Stock
+Yes
+Maximum Stock
+No
+Reorder Level
+Yes
+Units
+Bag 
+Bottle 
+Packet 
+Kg 
+Gram 
+Liter 
+ml 
+Piece 
+Box 
+
+Pricing
+Field
+Required
+Purchase Price
+Yes
+Selling Price
+Yes
+MRP
+No
+GST %
+Yes
+Discount Allowed
+Yes
+
+Product Information
+Field
+Required
+Manufacturer
+No
+Batch Tracking
+Yes
+Expiry Applicable
+Yes
+HSN Code
+Yes
+Description
+No
+
+Images
+Dealer can upload
+Product Image 
+Label 
+Brochure 
+Stored in AWS S3.
+
+8. Product Code
+Auto Generated
+Example
+PRD000001PRD000002PRD000003
+Dealer can optionally use manufacturer SKU.
+
+9. Product Types
+Fertilizer 
+Seed 
+Pesticide 
+Herbicide 
+Fungicide 
+Equipment 
+Other 
+Used for reports and filtering.
+
+10. Product Status
+Possible values
+ACTIVE
+INACTIVE
+DISCONTINUED
+OUT_OF_STOCK
+EXPIRED
+Only ACTIVE products can be sold.
+
+11. Product List
+Columns
+Product Code 
+Product Name 
+Brand 
+Category 
+Stock 
+Purchase Price 
+Selling Price 
+GST 
+Status 
+
+Filters
+Category 
+Brand 
+Product Type 
+Low Stock 
+Out of Stock 
+Active 
+Inactive 
+Expiring Soon 
+Search
+Product Name 
+Product Code 
+Barcode 
+Brand 
+
+12. Barcode & QR Code
+Every product can have
+Barcode
+QR Code
+Supported
+Manual Entry 
+Barcode Scanner 
+QR Scanner 
+Benefits
+Faster billing 
+Faster stock verification 
+Inventory accuracy 
+
+13. Product Profile
+Displays
+Basic Information
+↓
+Pricing
+↓
+Inventory Summary
+↓
+Purchase History
+↓
+Sales History
+↓
+Supplier History
+↓
+Stock Movement
+↓
+Expiry Details
+↓
+Documents
+↓
+Activity Timeline
+
+14. Product Images
+Maximum
+5 Images
+Supported
+JPG
+PNG
+WEBP
+Maximum Size
+3 MB
+Primary Image displayed in product list.
+
+15. Product Documents
+Upload
+Product Label 
+Technical Sheet 
+Safety Instructions 
+Usage Guide 
+Government Approval Documents 
+
+16. Stock Summary
+Displays
+Current Stock
+Reserved Stock
+Available Stock
+Incoming Stock
+Damaged Stock
+Expired Stock
+Reorder Level
+
+17. Batch Management
+Supported
+Batch Number
+Manufacturing Date
+Expiry Date
+Supplier
+Purchase Date
+Purchase Price
+Every purchase creates a new batch.
+Sales deduct stock using FIFO (First In First Out) by default.
+
+18. Pricing Rules
+Selling Price
+Must be greater than or equal to Purchase Price unless Dealer Admin overrides with confirmation.
+GST is calculated separately during billing.
+MRP is optional but, if entered, Selling Price cannot exceed MRP.
+
+19. Product Tags
+Dealer can assign tags.
+Examples
+Best Seller 
+Organic 
+Seasonal 
+New Arrival 
+Fast Moving 
+High Margin 
+Useful for filtering and promotions.
+
+20. REST APIs
+Create Product
+POST /api/v1/products
+Update Product
+PUT /api/v1/products/{id}
+Delete Product
+DELETE /api/v1/products/{id}
+Get Products
+GET /api/v1/products
+Search Products
+GET /api/v1/products/search
+Upload Image
+POST /api/v1/products/image
+
+21. Database Tables
+products
+id 
+dealer_id 
+product_code 
+product_name 
+brand_id 
+category_id 
+product_type 
+purchase_price 
+selling_price 
+mrp 
+gst_percentage 
+unit_id 
+hsn_code 
+reorder_level 
+status 
+
+product_images
+id 
+product_id 
+image_url 
+is_primary 
+
+product_batches
+id 
+product_id 
+batch_number 
+manufacture_date 
+expiry_date 
+quantity 
+purchase_price 
+supplier_id 
+
+product_documents
+id 
+product_id 
+document_type 
+file_url 
+
+product_tags
+id 
+tag_name 
+
+product_tag_mapping
+product_id 
+tag_id 
+
+22. Notifications
+Automatically notify Dealer Admin for
+Low Stock 
+Out of Stock 
+Expiry Within 30 Days 
+Price Updated 
+Product Inactivated 
+
+23. Audit Logs
+Track
+Product Created 
+Product Updated 
+Price Changed 
+GST Changed 
+Batch Added 
+Image Uploaded 
+Product Deleted (Soft Delete) 
+Status Changed 
+
+24. Security
+Products belong to one dealer only. 
+Product deletion uses soft delete. 
+Batch history cannot be modified after stock is consumed. 
+Every API validates dealer_id. 
+
+25. Edge Cases
+Duplicate product names with different brands. 
+Duplicate batch numbers. 
+Selling below purchase price. 
+Product marked inactive while present in open invoices. 
+Expired products still in stock. 
+Barcode already assigned to another product. 
+
+26. Acceptance Criteria
+✅ Dealer can create products.
+✅ Batch tracking works.
+✅ Barcode generation works.
+✅ Images upload successfully.
+✅ FIFO batch allocation is available.
+✅ Product history is maintained.
+✅ Soft delete implemented.
+✅ Inventory module can use products directly.
+
+27. Enterprise Enhancements Included
+To make SoftEdgeX more competitive, this module also supports:
+Multiple product images 
+Barcode & QR support 
+Batch-wise inventory 
+FIFO stock issue 
+Product tags 
+Technical documents 
+Manufacturer information 
+HSN & GST compliance 
+Reorder level alerts 
+Soft deletion 
+Complete audit trail
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Module 09 – Inventory Management
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: © SoftEdgeX Technologies. All Rights Reserved.
+
+1. Module Overview
+Purpose
+The Inventory Management module manages the complete stock lifecycle of every product.
+It tracks stock received, stock sold, damaged stock, expired stock, stock adjustments, batch-wise quantities, warehouse quantities, and maintains a complete inventory audit trail.
+This module acts as the Inventory Engine for the entire application.
+
+2. Business Objectives
+The system shall:
+Maintain real-time inventory. 
+Prevent negative stock. 
+Support batch-wise inventory. 
+Track expiry. 
+Track damaged stock. 
+Generate low stock alerts. 
+Maintain complete stock history. 
+Integrate automatically with Purchase & Sales. 
+
+3. User Roles
+Role
+Permission
+Super Admin
+View All
+Dealer Admin
+Full Access
+Staff
+Permission Based
+
+4. Inventory Workflow
+Purchase Entry      ↓Stock Added      ↓Available Inventory      ↓Sales      ↓Stock Reduced      ↓Stock Alert      ↓Purchase Again
+
+5. Stock Dashboard
+Displays
+Total Products 
+Total Stock Value 
+Low Stock Products 
+Out Of Stock Products 
+Expiring Products 
+Damaged Products 
+Reserved Stock 
+Available Stock 
+
+6. Stock Types
+Available Stock
+Ready for sale.
+
+Reserved Stock
+Reserved for pending invoices.
+Cannot be sold.
+
+Damaged Stock
+Broken or unusable.
+Cannot be sold.
+
+Expired Stock
+Expired products.
+Cannot be sold.
+
+In Transit (Future)
+Products ordered but not yet received.
+
+7. Stock Movement
+Every inventory change creates a Stock Movement record.
+Movement Types
+Purchase 
+Sale 
+Sales Return 
+Purchase Return 
+Manual Adjustment 
+Damaged 
+Expired 
+Opening Stock 
+No stock changes are allowed without recording a movement.
+
+8. Batch Management
+Every purchase creates a batch.
+Example
+Batch : UREA240601Quantity : 200 BagsPurchase Date : 01/06/2026Expiry : 01/06/2028
+Sales consume stock using FIFO.
+
+9. Stock Adjustment
+Purpose
+Correct physical stock differences.
+Reasons
+Physical Count 
+Damage 
+Theft 
+Missing Stock 
+Data Correction 
+Only Dealer Admin can approve adjustments.
+
+10. Physical Stock Verification
+Dealer can conduct stock verification.
+Workflow
+Inventory
+↓
+Physical Count
+↓
+Difference Found
+↓
+Adjustment Entry
+↓
+Approval
+↓
+Inventory Updated
+
+11. Low Stock Alert
+When
+Current Stock
+≤
+Reorder Level
+System
+Creates Notification
+Shows Dashboard Alert
+Sends WhatsApp (Optional)
+
+12. Expiry Management
+System checks daily.
+Alerts
+90 Days
+60 Days
+30 Days
+15 Days
+7 Days
+Expired
+Dealer receives notification.
+Expired products are blocked from sale.
+
+13. Damaged Stock
+Dealer records
+Product 
+Quantity 
+Batch 
+Reason 
+Image (Optional) 
+Damaged stock is deducted from available inventory.
+
+14. Opening Stock
+Used during initial implementation.
+Fields
+Product 
+Batch 
+Quantity 
+Purchase Price 
+Date 
+Allowed only once per product.
+
+15. Inventory Transactions
+Displays
+Date 
+Product 
+Batch 
+Movement Type 
+Quantity 
+Balance 
+User 
+Remarks 
+Acts as inventory ledger.
+
+16. Multi-Warehouse (Future Ready)
+Version 1
+Single Warehouse
+Database supports multiple warehouses.
+Future
+Main Warehouse 
+Secondary Warehouse 
+Branch Warehouse 
+
+17. Inventory Valuation
+Methods
+FIFO (Default) 
+Weighted Average (Future) 
+Reports
+Current Stock Value
+Purchase Value
+Sales Value
+Expected Profit
+
+18. Product Availability
+Formula
+Available Stock=Current Stock-Reserved Stock-Damaged Stock-Expired Stock
+
+19. Inventory Reports
+Generate
+Stock Report 
+Low Stock Report 
+Expiry Report 
+Damaged Report 
+Stock Ledger 
+Batch Report 
+Inventory Valuation 
+Fast Moving Products 
+Slow Moving Products 
+Export
+PDF
+Excel
+CSV
+
+20. Barcode Scanner
+Dealer can scan
+Barcode
+↓
+Find Product
+↓
+Display Stock
+↓
+Display Batch
+↓
+Display Expiry
+
+21. REST APIs
+Current Stock
+GET /api/v1/inventory
+Stock Movement
+GET /api/v1/inventory/movements
+Stock Adjustment
+POST /api/v1/inventory/adjustment
+Low Stock
+GET /api/v1/inventory/low-stock
+Expiry
+GET /api/v1/inventory/expiry
+Physical Verification
+POST /api/v1/inventory/verification
+
+22. Database Tables
+inventory
+id 
+dealer_id 
+product_id 
+current_stock 
+reserved_stock 
+damaged_stock 
+expired_stock 
+available_stock 
+
+inventory_batches
+id 
+inventory_id 
+batch_number 
+purchase_date 
+expiry_date 
+quantity 
+
+inventory_movements
+id 
+inventory_id 
+movement_type 
+quantity 
+reference_type 
+reference_id 
+user_id 
+remarks 
+created_at 
+
+stock_adjustments
+id 
+product_id 
+old_quantity 
+new_quantity 
+reason 
+approved_by 
+
+damaged_inventory
+id 
+batch_id 
+quantity 
+reason 
+image_url 
+
+23. Notifications
+Automatic
+Low Stock 
+Out Of Stock 
+Expiring Soon 
+Expired Product 
+Damaged Entry 
+Large Stock Adjustment 
+Channels
+Dashboard 
+WhatsApp 
+Email 
+
+24. Security
+Negative stock not allowed. 
+Batch history cannot be edited after sale. 
+Only Dealer Admin can approve stock adjustments. 
+Inventory movements are immutable. 
+Soft delete only. 
+
+25. Audit Logs
+Track
+Stock Added 
+Stock Reduced 
+Adjustment 
+Damage 
+Expiry 
+Verification 
+Batch Created 
+Batch Closed 
+
+26. Edge Cases
+Selling last item during concurrent billing. 
+Duplicate batch number. 
+Expired batch with available stock. 
+Stock adjustment during active sale. 
+Physical verification interrupted. 
+Barcode not found. 
+Purchase return after partial sale. 
+
+27. Acceptance Criteria
+✅ Batch-wise inventory works.
+✅ FIFO implemented.
+✅ Negative stock prevented.
+✅ Low stock alerts generated.
+✅ Expired products blocked.
+✅ Stock adjustment approval works.
+✅ Complete inventory history maintained.
+
+28. Enterprise Features Added
+Batch-wise stock 
+FIFO inventory 
+Inventory ledger 
+Stock valuation 
+Physical verification 
+Barcode support 
+Multi-warehouse ready 
+Stock adjustment approval 
+Expiry tracking 
+Damage management 
+Audit trail 
+Dashboard analytics
+
+
+
+
+
+Module 10 – Supplier Management
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: © SoftEdgeX Technologies. All Rights Reserved.
+
+1. Module Overview
+Purpose
+The Supplier Management module maintains all suppliers from whom the dealer purchases fertilizers, seeds, pesticides, equipment, and other agricultural products.
+The module manages supplier profiles, purchase history, payment history, outstanding balances, GST information, contact persons, bank details, and business relationships.
+This module acts as the Vendor Management System (VMS) of SoftEdgeX AgriSuite.
+
+2. Business Objectives
+The system shall
+Maintain supplier master records. 
+Track supplier-wise purchases. 
+Track pending payments. 
+Maintain GST and legal details. 
+Maintain supplier-wise product catalog. 
+Generate supplier reports. 
+Improve procurement planning. 
+
+3. User Roles
+Role
+Permission
+Super Admin
+View All Dealers
+Dealer Admin
+Full Access
+Staff
+Permission Based
+
+4. Supplier Categories
+Default Categories
+Fertilizer Supplier 
+Seed Supplier 
+Pesticide Supplier 
+Equipment Supplier 
+Packaging Supplier 
+Local Distributor 
+Manufacturer 
+Transport Vendor 
+Other 
+Dealer can create custom categories.
+
+5. Add Supplier
+Navigation
+Dashboard↓Supplier Management↓Add Supplier↓Save↓Supplier Profile
+
+6. Supplier Registration
+Business Details
+Field
+Required
+Supplier Code
+Auto
+Company Name
+Yes
+Supplier Category
+Yes
+GST Number
+Yes
+PAN Number
+Optional
+License Number
+Optional
+
+Contact Person
+Field
+Required
+Contact Name
+Yes
+Mobile
+Yes
+Alternate Mobile
+No
+Email
+Yes
+Designation
+No
+
+Address
+Field
+Required
+Address
+Yes
+City
+Yes
+District
+Yes
+State
+Yes
+PIN Code
+Yes
+
+Banking Information
+Field
+Required
+Bank Name
+Optional
+Account Number
+Optional
+IFSC Code
+Optional
+UPI ID
+Optional
+
+Business Information
+Field
+Required
+Credit Days
+Yes
+Credit Limit
+Optional
+Payment Terms
+Yes
+Preferred Payment Method
+Yes
+Payment Methods
+UPI 
+Bank Transfer 
+Cheque 
+Cash 
+
+7. Supplier Code
+Automatically Generated
+Example
+SUP000001SUP000002SUP000003
+
+8. Validation Rules
+Company Name
+Required
+GST Number
+Valid GST Format
+Mobile
+10 Digits
+Email
+Valid Format
+Supplier Code
+Unique
+Credit Days
+Cannot be Negative
+
+9. Supplier List
+Columns
+Supplier Code
+Company Name
+Category
+Contact Person
+Mobile
+Outstanding Amount
+Last Purchase
+Status
+
+Filters
+Category
+Outstanding
+District
+State
+Active
+Inactive
+Search
+Company Name
+Supplier Code
+Mobile
+GST
+
+10. Supplier Profile
+Displays
+Company Details
+↓
+Contact Details
+↓
+Bank Details
+↓
+Purchase History
+↓
+Payment History
+↓
+Outstanding Balance
+↓
+Products Supplied
+↓
+Documents
+↓
+Notes
+↓
+Timeline
+
+11. Products Supplied
+Displays
+Product Name
+Brand
+Last Purchase Price
+Current Price
+Last Purchase Date
+Availability
+Preferred Supplier
+Dealer can mark one supplier as the preferred supplier for each product.
+
+12. Purchase History
+Displays
+Purchase Number
+Date
+Items
+Amount
+GST
+Payment Status
+Invoice
+Clicking Purchase Number opens complete purchase details.
+
+13. Payment History
+Displays
+Payment Date
+Amount
+Mode
+Reference Number
+Balance
+Status
+
+14. Outstanding Balance
+Displays
+Total Purchases
+Total Paid
+Pending Amount
+Credit Limit
+Credit Days
+Overdue Amount
+
+15. Documents
+Upload
+GST Certificate
+PAN
+Trade License
+Cancelled Cheque
+Agreement
+Price Catalogue
+Supported Formats
+PDF
+JPG
+PNG
+Maximum Size
+10 MB
+Stored in AWS S3.
+
+16. Notes
+Dealer can maintain internal notes.
+Example
+Supplier provides 3% discount above ₹1 lakh order.Usually delivers within 2 days.Closed on Sundays.
+
+17. Supplier Status
+Possible Values
+ACTIVE
+INACTIVE
+BLOCKED
+BLACKLISTED
+Only ACTIVE suppliers can receive purchase orders.
+
+18. Supplier Rating
+Dealer can rate suppliers.
+Criteria
+Product Quality 
+Delivery Time 
+Pricing 
+Support 
+Availability 
+Overall Rating
+1–5 Stars
+Useful during procurement decisions.
+
+19. Communication History
+Displays
+Calls
+Emails
+WhatsApp Messages
+Purchase Requests
+Payment Reminders
+
+20. REST APIs
+Create Supplier
+POST /api/v1/suppliers
+Get Suppliers
+GET /api/v1/suppliers
+Supplier Details
+GET /api/v1/suppliers/{id}
+Update Supplier
+PUT /api/v1/suppliers/{id}
+Deactivate Supplier
+PUT /api/v1/suppliers/{id}/status
+Supplier Payments
+GET /api/v1/suppliers/{id}/payments
+
+21. Database Tables
+suppliers
+id 
+dealer_id 
+supplier_code 
+company_name 
+category 
+gst_number 
+pan_number 
+contact_name 
+mobile 
+email 
+address 
+city 
+district 
+state 
+pin_code 
+credit_days 
+credit_limit 
+status 
+
+supplier_bank_details
+supplier_id 
+bank_name 
+account_number 
+ifsc 
+upi_id 
+
+supplier_documents
+id 
+supplier_id 
+document_type 
+document_url 
+
+supplier_notes
+id 
+supplier_id 
+note 
+created_by 
+
+supplier_product_mapping
+supplier_id 
+product_id 
+purchase_price 
+preferred_supplier 
+
+supplier_ratings
+supplier_id 
+quality 
+delivery 
+pricing 
+support 
+overall_rating 
+
+22. Notifications
+Automatic Notifications
+Supplier Created 
+Supplier Blocked 
+Payment Due 
+Credit Limit Exceeded 
+New Price Catalogue Uploaded 
+Agreement Expiring (Future) 
+
+23. Audit Logs
+Track
+Supplier Created 
+Supplier Updated 
+Bank Details Updated 
+Rating Updated 
+Status Changed 
+Document Uploaded 
+Payment Recorded 
+
+24. Security
+Suppliers belong to one dealer. 
+Soft Delete only. 
+Bank details encrypted. 
+Documents require authenticated access. 
+Every API validates dealer_id. 
+
+25. Edge Cases
+Duplicate GST number. 
+Duplicate supplier registration. 
+Supplier blocked with pending purchase orders. 
+Payment exceeds outstanding amount. 
+Supplier deleted while products exist. 
+Bank details changed during pending payments. 
+
+26. Acceptance Criteria
+✅ Supplier registration works.
+✅ Purchase and payment history linked.
+✅ Outstanding balances calculated correctly.
+✅ Preferred supplier mapping works.
+✅ Documents upload successfully.
+✅ Ratings saved correctly.
+✅ Communication history maintained.
+
+27. Enterprise Features Added
+Vendor Rating System 
+Supplier Performance Tracking 
+Preferred Supplier Mapping 
+Product-wise Purchase Pricing 
+Bank Details 
+Credit Terms 
+Communication History 
+Vendor Documents 
+Outstanding Analysis 
+Audit Trail
+
+
+
+Module 11 – Purchase Management
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: © SoftEdgeX Technologies. All Rights Reserved.
+
+1. Module Overview
+Purpose
+The Purchase Management module manages the complete procurement lifecycle from identifying stock requirements to receiving goods and updating inventory.
+Every purchase is linked to:
+Supplier 
+Product 
+Inventory 
+Batch 
+GST 
+Payment 
+Audit Logs 
+This module automatically updates inventory after successful goods receipt.
+
+2. Business Objectives
+The system shall
+Manage supplier purchases. 
+Generate Purchase Orders. 
+Receive products. 
+Create inventory batches. 
+Update stock automatically. 
+Track purchase returns. 
+Maintain GST Input Credit. 
+Generate purchase reports. 
+
+3. User Roles
+Role
+Permission
+Super Admin
+View All
+Dealer Admin
+Full Access
+Staff
+Permission Based
+
+4. Purchase Lifecycle
+Low Stock↓Purchase Requisition (PR)↓Purchase Order (PO)↓Supplier Confirmation↓Goods Receipt Note (GRN)↓Purchase Invoice↓Inventory Updated↓Supplier Payment↓Purchase Closed
+
+5. Purchase Requisition (PR)
+Purpose
+Internal request to purchase products.
+Created by
+Store Manager 
+Inventory Staff 
+Fields
+PR Number 
+Request Date 
+Requested By 
+Product 
+Quantity 
+Priority 
+Expected Date 
+Remarks 
+Status
+Draft 
+Submitted 
+Approved 
+Rejected 
+Converted to PO 
+
+6. Purchase Order (PO)
+Created after PR approval.
+PO contains
+PO Number 
+Supplier 
+Delivery Address 
+Order Date 
+Expected Delivery 
+Payment Terms 
+Products 
+Quantity 
+Purchase Rate 
+GST 
+Total Amount 
+Status
+Draft 
+Sent 
+Accepted 
+Partially Delivered 
+Completed 
+Cancelled 
+
+7. Purchase Order Screen
+Columns
+Product 
+Batch (Optional) 
+Quantity 
+Unit 
+Purchase Price 
+GST % 
+Discount 
+Line Total 
+Footer
+Sub Total 
+GST 
+Transport Charges 
+Other Charges 
+Grand Total 
+
+8. Goods Receipt Note (GRN)
+Purpose
+Record actual products received.
+Workflow
+Purchase Order↓Receive Goods↓Verify Quantity↓Verify Batch↓Generate GRN↓Create Inventory Batch↓Increase Stock
+
+Fields
+GRN Number 
+PO Number 
+Supplier 
+Received Date 
+Receiver 
+Batch Number 
+Manufacturing Date 
+Expiry Date 
+Quantity Received 
+Damaged Quantity 
+Remarks 
+
+9. Partial Delivery
+Example
+PO
+100 Bags
+Supplier Delivers
+60 Bags
+Status
+Partially Delivered
+Remaining
+40 Bags
+System allows multiple GRNs until PO is completed.
+
+10. Purchase Invoice
+Stores
+Invoice Number
+Invoice Date
+Supplier Invoice
+GST
+Transport Charges
+Discount
+Total Amount
+Payment Status
+Upload Invoice PDF
+
+11. Batch Creation
+Every GRN automatically creates
+Batch
+Example
+BatchUREA24062026Quantity100Expiry24/06/2028
+Inventory updates automatically.
+
+12. Purchase Return
+Reasons
+Wrong Product
+Expired Product
+Damaged Product
+Quality Issue
+Excess Quantity
+Workflow
+Select Purchase↓Select Items↓Enter Quantity↓Reason↓Approve↓Reduce Inventory↓Supplier Credit Note
+
+13. Purchase Approval Workflow
+Purchase Amount
+≤ ₹50,000
+Approval
+Dealer Admin
+
+₹50,001+
+Optional Second Approval (Configurable)
+Future Ready
+
+14. Supplier Credit Notes
+Generated after purchase return.
+Used to
+Reduce future purchase payments.
+
+15. GST Input Credit
+Store
+CGST
+SGST
+IGST
+HSN
+Tax Amount
+Available for accounting integration.
+
+16. Landed Cost
+System calculates
+Purchase Cost
+
+Transport
+
+Loading
+
+Insurance
+
+Other Charges
+=
+Actual Product Cost
+Useful for profit analysis.
+
+17. Purchase History
+Displays
+Purchase Number
+Supplier
+Date
+Items
+Amount
+Status
+Invoice
+Payment
+
+18. Purchase Analytics
+Shows
+Monthly Purchases
+Supplier Wise Purchases
+Product Wise Purchases
+Purchase Trends
+Average Purchase Cost
+Most Purchased Product
+Top Supplier
+
+19. Purchase Dashboard
+Cards
+Today's Purchases
+Pending Deliveries
+Pending Approvals
+Purchase Returns
+Outstanding Supplier Payments
+Upcoming Deliveries
+
+20. REST APIs
+Create Purchase Requisition
+POST /api/v1/purchase-requisitions
+Create Purchase Order
+POST /api/v1/purchase-orders
+Receive Goods
+POST /api/v1/grn
+Purchase Invoice
+POST /api/v1/purchase-invoices
+Purchase Return
+POST /api/v1/purchase-returns
+Purchase History
+GET /api/v1/purchases
+
+21. Database Tables
+purchase_requisitions
+id 
+pr_number 
+dealer_id 
+requested_by 
+status 
+expected_date 
+
+purchase_orders
+id 
+po_number 
+supplier_id 
+order_date 
+total_amount 
+status 
+
+purchase_order_items
+purchase_order_id 
+product_id 
+quantity 
+rate 
+gst 
+total 
+
+goods_receipts
+id 
+grn_number 
+purchase_order_id 
+received_date 
+
+purchase_invoices
+id 
+invoice_number 
+supplier_invoice 
+total_amount 
+payment_status 
+
+purchase_returns
+id 
+purchase_invoice_id 
+reason 
+total_amount 
+
+22. Notifications
+Automatic
+PO Created 
+Goods Received 
+Partial Delivery 
+Purchase Return 
+Supplier Payment Due 
+Purchase Approval Required 
+
+23. Audit Logs
+Track
+PR Created 
+PO Created 
+PO Updated 
+GRN Created 
+Purchase Invoice 
+Batch Created 
+Purchase Return 
+Approval 
+Cancellation 
+
+24. Security
+Inventory updates only through approved GRNs. 
+Purchase deletion not allowed after inventory update. 
+Purchase return cannot exceed purchased quantity. 
+Supplier must be ACTIVE. 
+Dealer isolation enforced. 
+
+25. Edge Cases
+Supplier delivers wrong quantity. 
+Duplicate supplier invoice. 
+Duplicate batch. 
+Goods received after PO expiry. 
+Purchase cancelled after partial delivery. 
+Invoice amount differs from PO. 
+Multiple GRNs for one PO. 
+Purchase return after partial sale. 
+
+26. Acceptance Criteria
+✅ Purchase Requisition works.
+✅ Purchase Orders generated.
+✅ Partial deliveries supported.
+✅ GRN updates inventory.
+✅ Batch creation automatic.
+✅ Purchase returns work.
+✅ GST input stored.
+✅ Landed cost calculated.
+✅ Purchase analytics available.
+
+27. Enterprise Features Added
+Purchase Requisition (PR) 
+Purchase Order (PO) 
+Goods Receipt Note (GRN) 
+Partial Delivery 
+Purchase Approval Workflow 
+Purchase Returns 
+Supplier Credit Notes 
+Landed Cost Calculation 
+GST Input Credit 
+Automatic Batch Creation 
+Automatic Inventory Update 
+Purchase Analytics 
+Audit Trail 
+Document Uploads
+
+
+
+Module 12 – Sales & Billing
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: © SoftEdgeX Technologies. All Rights Reserved.
+
+1. Module Overview
+Purpose
+The Sales & Billing module manages the complete sales lifecycle from farmer selection to invoice generation, inventory deduction, payment collection, GST calculation, and sales reporting.
+This module automatically updates:
+Inventory 
+Farmer Purchase History 
+Credit Ledger 
+Payment Records 
+Dashboard 
+Reports 
+Audit Logs 
+
+2. Business Objectives
+The system shall
+Generate GST invoices 
+Support cash and credit sales 
+Automatically deduct inventory 
+Update farmer purchase history 
+Print and share invoices 
+Handle returns 
+Maintain complete sales history 
+Calculate profits 
+
+3. User Roles
+Role
+Permission
+Super Admin
+View All Dealers
+Dealer Admin
+Full Access
+Staff
+Permission Based
+
+4. Sales Workflow
+Select Farmer      ↓Add Products      ↓Validate Stock      ↓Calculate GST      ↓Apply Discount      ↓Select Payment Mode      ↓Generate Invoice      ↓Deduct Inventory      ↓Update Farmer History      ↓Generate PDF      ↓Print / WhatsApp Invoice
+
+5. Invoice Types
+The system supports:
+Cash Invoice 
+Credit Invoice (Udhar) 
+Mixed Payment (Cash + Credit) 
+Proforma Invoice 
+Tax Invoice 
+Delivery Challan (Future) 
+
+6. Create New Invoice
+Navigation
+Dashboard      ↓Sales & Billing      ↓Create Invoice
+
+7. Invoice Header
+Fields
+Field
+Required
+Invoice Number
+Auto
+Invoice Date
+Auto
+Farmer
+Yes
+Staff
+Auto
+Payment Mode
+Yes
+Billing Type
+Yes
+Notes
+No
+Invoice Number Example
+INV-2026-000001
+
+8. Product Selection
+Dealer can
+Search Product 
+Barcode Scan 
+QR Scan 
+Displays
+Product Name 
+Batch 
+Available Stock 
+Selling Price 
+GST 
+Expiry Date 
+
+9. Product Table
+Each row contains
+Product 
+Batch 
+Quantity 
+Unit 
+Selling Price 
+Discount 
+GST 
+Total 
+
+10. Automatic Batch Selection
+Default Method
+FIFO
+System automatically selects
+Oldest Available Batch
+Dealer can manually change batch if permission granted.
+
+11. Stock Validation
+Before invoice generation
+System checks
+Product Active 
+Batch Available 
+Stock Available 
+Batch Not Expired 
+Errors
+Insufficient Stock
+Product Expired
+Batch Not Available
+
+12. Discount Management
+Supported
+Product Discount 
+Invoice Discount 
+Percentage Discount 
+Fixed Amount Discount 
+Coupon Discount (Future) 
+Dealer Admin can configure
+Maximum Discount
+Staff cannot exceed the configured limit.
+
+13. GST Calculation
+Supports
+CGST 
+SGST 
+IGST 
+GST automatically calculated based on product HSN.
+Displayed separately on invoice.
+
+14. Payment Modes
+Supported
+Cash 
+UPI 
+Card 
+Net Banking 
+Credit (Udhar) 
+Mixed Payment 
+
+15. Credit Sale
+If
+Payment Mode
+Credit
+System
+Creates Credit Entry
+Updates Farmer Ledger
+Displays Outstanding Balance
+No payment transaction is created until money is received.
+
+16. Mixed Payment
+Example
+Invoice
+₹10,000
+Cash
+₹6,000
+Credit
+₹4,000
+System automatically creates
+Payment Entry 
+Credit Ledger Entry 
+
+17. Invoice Generation
+After successful validation
+System
+Generates Invoice 
+Deducts Inventory 
+Updates Batch Stock 
+Updates Farmer History 
+Creates Audit Log 
+Generates PDF 
+Sends Notifications 
+
+18. Invoice Printing
+Formats
+A4 
+Thermal Printer (58mm/80mm) 
+Buttons
+Print 
+Download PDF 
+Share WhatsApp 
+Share Email 
+
+19. WhatsApp Invoice
+Dealer clicks
+Share WhatsApp
+System sends
+PDF Invoice 
+Payment Link (Optional) 
+Thank You Message 
+
+20. Sales Return
+Reasons
+Wrong Product 
+Damaged Product 
+Expired Product 
+Customer Return 
+Workflow
+Invoice
+↓
+Select Product
+↓
+Quantity
+↓
+Reason
+↓
+Return Approved
+↓
+Inventory Updated
+↓
+Credit Note Generated
+
+21. Sales Cancellation
+Allowed
+Only
+Dealer Admin
+Conditions
+Invoice
+No Payment
+No Return
+Cancellation
+Restores Inventory
+Removes Sales Entry
+Updates Reports
+
+22. Profit Calculation
+Invoice
+Stores
+Purchase Cost
+Selling Price
+Profit
+Gross Margin
+Net Margin
+Visible
+Only Dealer Admin
+
+23. Sales Dashboard
+Cards
+Today's Sales
+Monthly Sales
+Cash Sales
+Credit Sales
+Pending Payments
+Average Bill Value
+Top Customers
+Top Products
+
+24. Sales Reports
+Generate
+Daily Sales 
+Monthly Sales 
+Product Wise Sales 
+Farmer Wise Sales 
+Staff Wise Sales 
+GST Report 
+Profit Report 
+Discount Report 
+Credit Sales Report 
+Export
+PDF 
+Excel 
+CSV 
+
+25. REST APIs
+Create Invoice
+POST /api/v1/sales
+Invoice Details
+GET /api/v1/sales/{id}
+Sales List
+GET /api/v1/sales
+Sales Return
+POST /api/v1/sales/return
+Cancel Invoice
+PUT /api/v1/sales/{id}/cancel
+Print Invoice
+GET /api/v1/sales/{id}/pdf
+Share WhatsApp
+POST /api/v1/sales/{id}/share
+
+26. Database Tables
+sales_invoices
+id 
+invoice_number 
+dealer_id 
+farmer_id 
+staff_id 
+invoice_date 
+subtotal 
+discount 
+gst 
+total 
+payment_mode 
+status 
+
+sales_invoice_items
+invoice_id 
+product_id 
+batch_id 
+quantity 
+selling_price 
+discount 
+gst 
+total 
+
+sales_returns
+id 
+invoice_id 
+product_id 
+quantity 
+reason 
+return_date 
+
+sales_payments
+id 
+invoice_id 
+amount 
+payment_mode 
+reference_number 
+payment_date 
+
+27. Notifications
+Automatic
+Invoice Generated 
+Payment Received 
+Credit Sale Created 
+WhatsApp Invoice Sent 
+Sales Return Processed 
+
+28. Audit Logs
+Track
+Invoice Created 
+Invoice Updated 
+Invoice Printed 
+Invoice Shared 
+Invoice Cancelled 
+Sales Return 
+Discount Override 
+
+29. Security
+Invoice numbers are immutable. 
+Inventory updates are transactional. 
+Staff discount limits enforced. 
+Sales cannot use expired batches. 
+Cancelled invoices remain in history. 
+All APIs validate dealer_id. 
+
+30. Edge Cases
+Stock changes while invoice is being created. 
+Two users sell the last batch simultaneously. 
+Mixed payment with partial failure. 
+Duplicate invoice print requests. 
+Invoice cancellation after payment received. 
+Product returned after partial consumption. 
+Internet disconnects before invoice completion. 
+WhatsApp message delivery fails. 
+
+31. Acceptance Criteria
+✅ GST invoices generated correctly.
+✅ FIFO batch deduction works.
+✅ Inventory updates automatically.
+✅ Farmer purchase history updates.
+✅ Credit sales create ledger entries.
+✅ Mixed payments supported.
+✅ Sales returns restore stock.
+✅ Profit calculation available.
+✅ PDF invoices generated.
+✅ WhatsApp invoice sharing works.
+
+32. Enterprise Features Added
+POS Billing 
+Barcode Billing 
+QR Billing 
+FIFO Batch Selection 
+Mixed Payment Support 
+GST Compliance 
+Credit Sales 
+Profit Analysis 
+Thermal Printer Support 
+WhatsApp Invoice Sharing 
+Sales Returns 
+Invoice Cancellation 
+Audit Trail 
+Dashboard Analytics
+
+
+
+
+
+
+
+
+
+
+Module 13 – Credit (Udhar) Management
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: © SoftEdgeX Technologies. All Rights Reserved.
+
+1. Module Overview
+Purpose
+The Credit Management module manages all credit sales made to farmers. It tracks outstanding balances, payment collections, due dates, reminders, overdue accounts, payment history, and farmer credit limits.
+Every credit transaction is linked with:
+Farmer 
+Sales Invoice 
+Payment Collection 
+Notification 
+Reports 
+Dashboard 
+Audit Logs 
+
+2. Business Objectives
+The system shall
+Maintain farmer credit ledger. 
+Track outstanding balances. 
+Record partial payments. 
+Generate payment receipts. 
+Send payment reminders. 
+Block credit beyond limit. 
+Generate recovery reports. 
+Improve cash flow. 
+
+3. User Roles
+Role
+Permission
+Super Admin
+View All Dealers
+Dealer Admin
+Full Access
+Staff
+Collection Permission Based
+
+4. Credit Workflow
+Credit Sale      ↓Ledger Created      ↓Outstanding Updated      ↓Reminder Scheduled      ↓Payment Collected      ↓Receipt Generated      ↓Outstanding Reduced      ↓Ledger Closed
+
+5. Credit Ledger
+Each farmer has one ledger.
+The ledger automatically records:
+Credit Sales 
+Payments Received 
+Credit Notes 
+Debit Adjustments 
+Opening Balance 
+Closing Balance 
+Ledger cannot be deleted.
+
+6. Credit Dashboard
+Display
+Total Outstanding 
+Today's Collections 
+Overdue Amount 
+Farmers with Outstanding 
+Credit Sales This Month 
+Average Collection Days 
+Largest Debtors 
+Collection Target 
+
+7. Credit Sale Entry
+Credit entries are automatically created from the Sales module.
+Fields
+Invoice Number 
+Farmer 
+Credit Amount 
+Credit Date 
+Due Date 
+Outstanding Amount 
+Credit Status 
+No manual credit entry is allowed.
+
+8. Due Date Management
+Default Due Date
+30 Days
+Dealer can configure
+15 Days 
+30 Days 
+45 Days 
+60 Days 
+Custom 
+
+9. Credit Status
+Possible Values
+OPEN 
+PARTIALLY_PAID 
+PAID 
+OVERDUE 
+WRITTEN_OFF 
+
+10. Credit Limit
+Each farmer has
+Credit Limit
+Example
+₹50,000
+Current Outstanding
+₹42,000
+Available Credit
+₹8,000
+System checks limit before creating new credit sale.
+
+11. Credit Blocking
+If
+Outstanding
+Credit Limit
+System
+Blocks new Credit Sales.
+Dealer Admin can override.
+Staff cannot override.
+
+12. Partial Payment
+Example
+Invoice
+₹20,000
+Payment
+₹8,000
+Remaining
+₹12,000
+Ledger updates automatically.
+
+13. Payment Collection
+Fields
+Farmer 
+Invoice 
+Amount 
+Payment Date 
+Payment Mode 
+Reference Number 
+Collected By 
+Remarks 
+Payment Modes
+Cash 
+UPI 
+Bank Transfer 
+Cheque 
+
+14. Collection Receipt
+Automatically generated.
+Contains
+Receipt Number 
+Farmer 
+Invoice Reference 
+Amount Received 
+Outstanding Balance 
+Collector 
+Payment Date 
+Formats
+PDF 
+Print 
+WhatsApp 
+
+15. Collection Schedule
+Dealer can create
+Collection Tasks
+Fields
+Farmer 
+Due Date 
+Assigned Staff 
+Priority 
+Notes 
+Visible on Staff Dashboard.
+
+16. Reminder Engine
+Automatic reminders
+7 Days Before Due Date
+3 Days Before
+Due Date
+3 Days After
+7 Days After
+15 Days After
+30 Days After
+Channels
+WhatsApp 
+SMS 
+Email 
+Dealer can customize reminder templates.
+
+17. Overdue Management
+Displays
+Farmer 
+Invoice 
+Outstanding 
+Due Days 
+Risk Level 
+Risk Levels
+Low 
+Medium 
+High 
+Critical 
+Based on overdue days.
+
+18. Write-Off Management
+Only Dealer Admin.
+Used when
+Amount becomes unrecoverable.
+Requires
+Reason
+Approval
+Remarks
+Written-off entries remain in reports.
+
+19. Credit Notes
+Used for
+Product Return 
+Billing Correction 
+Manual Adjustment 
+Automatically adjusts outstanding balance.
+
+20. Collection Analytics
+Reports
+Daily Collections 
+Monthly Collections 
+Staff-wise Collections 
+Farmer-wise Outstanding 
+Aging Analysis 
+Recovery Percentage 
+Collection Efficiency 
+
+21. Aging Analysis
+System groups outstanding amounts into
+0–30 Days 
+31–60 Days 
+61–90 Days 
+91–180 Days 
+Above 180 Days 
+Used for collection planning.
+
+22. REST APIs
+Create Collection
+POST /api/v1/credit/collections
+Outstanding Summary
+GET /api/v1/credit/outstanding
+Ledger
+GET /api/v1/credit/ledger/{farmerId}
+Credit Report
+GET /api/v1/credit/report
+Write Off
+POST /api/v1/credit/write-off
+Credit Note
+POST /api/v1/credit/credit-note
+
+23. Database Tables
+farmer_credit_ledger
+id 
+farmer_id 
+invoice_id 
+credit_amount 
+outstanding_amount 
+due_date 
+status 
+
+credit_collections
+id 
+ledger_id 
+amount 
+payment_mode 
+payment_date 
+collected_by 
+
+collection_tasks
+id 
+farmer_id 
+assigned_staff 
+due_date 
+priority 
+status 
+
+credit_notes
+id 
+ledger_id 
+amount 
+reason 
+
+write_offs
+id 
+ledger_id 
+amount 
+reason 
+approved_by 
+
+24. Notifications
+Automatic
+Credit Created 
+Payment Due 
+Overdue Reminder 
+Payment Received 
+Credit Limit Exceeded 
+Collection Assigned 
+Write-Off Approved 
+
+25. Audit Logs
+Track
+Credit Created 
+Collection Recorded 
+Reminder Sent 
+Credit Limit Changed 
+Write-Off 
+Credit Note 
+Payment Edited 
+
+26. Security
+Only Dealer Admin can modify credit limits. 
+Collections cannot exceed outstanding balance. 
+Write-offs require Dealer Admin approval. 
+Credit ledgers are immutable; adjustments are recorded as separate entries. 
+Every API validates dealer_id. 
+
+27. Edge Cases
+Farmer pays more than outstanding. 
+Multiple payments on the same invoice. 
+Credit limit changed below current outstanding. 
+Reminder sent after payment received. 
+Payment entered twice. 
+Invoice cancelled after partial collection. 
+Farmer has multiple overdue invoices. 
+
+28. Acceptance Criteria
+✅ Credit ledger created automatically from credit sales.
+✅ Partial payments supported.
+✅ Outstanding balance calculated correctly.
+✅ Credit limit enforced.
+✅ Automatic reminders sent.
+✅ Collection receipts generated.
+✅ Aging reports available.
+✅ Write-offs tracked.
+
+29. Enterprise Features Added
+Accounts Receivable Ledger 
+Credit Limit Control 
+Partial Payment Support 
+Collection Task Assignment 
+Automated Reminder Engine 
+Aging Analysis 
+Risk Classification 
+Collection Dashboard 
+Write-Off Management 
+Credit Notes 
+Receipt Generation 
+Audit Trail 
+WhatsApp Collection Reminders
+
+
+
+Module 14 – Visit Tracking (Field Visit Management)
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: © SoftEdgeX Technologies. All Rights Reserved.
+
+1. Module Overview
+Purpose
+The Visit Tracking module helps dealers and field staff manage farmer visits, capture visit details, recommend products, schedule follow-ups, and maintain a complete visit history.
+Every visit is linked to:
+Farmer 
+Staff 
+Products Discussed 
+Sales Opportunity 
+Follow-up 
+Notifications 
+Reports 
+
+2. Business Objectives
+The system shall
+Schedule farmer visits. 
+Record visit details. 
+Track visit outcomes. 
+Capture farm observations. 
+Recommend products. 
+Schedule follow-ups. 
+Monitor staff productivity. 
+Build long-term farmer relationships. 
+
+3. User Roles
+Role
+Permission
+Super Admin
+View All Dealers
+Dealer Admin
+Full Access
+Staff
+Assigned Visits Only
+
+4. Visit Workflow
+Dashboard      ↓Schedule Visit      ↓Assign Staff      ↓Visit Reminder      ↓Check-In      ↓Record Visit Details      ↓Recommend Products      ↓Schedule Follow-Up      ↓Check-Out      ↓Visit Completed
+
+5. Visit Types
+Dealer can choose
+New Farmer Visit 
+Follow-up Visit 
+Product Demonstration 
+Complaint Visit 
+Payment Collection 
+Crop Inspection 
+Seasonal Advisory 
+Promotional Visit 
+Emergency Visit 
+Dealer can create custom visit types.
+
+6. Schedule Visit
+Fields
+Field
+Required
+Farmer
+Yes
+Assigned Staff
+Yes
+Visit Date
+Yes
+Visit Time
+Yes
+Visit Type
+Yes
+Priority
+Yes
+Purpose
+Yes
+Remarks
+No
+Priority
+Low 
+Medium 
+High 
+Urgent 
+
+7. Staff Calendar
+Displays
+Today's Visits 
+Upcoming Visits 
+Missed Visits 
+Completed Visits 
+Views
+Daily 
+Weekly 
+Monthly 
+
+8. Check-In
+Staff reaches farmer location.
+Clicks
+Check-In
+System Records
+Date 
+Time 
+GPS Location (Optional) 
+Device 
+Staff Name 
+Status changes to
+IN_PROGRESS
+
+9. Visit Details
+Staff records
+Crop Stage 
+Current Problem 
+Discussion Summary 
+Products Discussed 
+Products Recommended 
+Quantity Expected 
+Customer Feedback 
+Competitor Products Used 
+
+10. Product Recommendation
+Staff can recommend products.
+Displays
+Product 
+Quantity 
+Usage Instructions 
+Estimated Cost 
+Recommendations appear in Farmer Profile.
+
+11. Image Upload
+Staff can upload
+Crop Images 
+Farm Images 
+Pest Images 
+Invoice Images 
+Supported
+JPG 
+PNG 
+WEBP 
+Maximum
+10 Images
+Stored in AWS S3.
+
+12. Visit Outcome
+Possible Outcomes
+Order Confirmed 
+Follow-Up Required 
+Payment Collected 
+No Purchase 
+Complaint Registered 
+Product Demo Completed 
+
+13. Follow-Up
+Dealer or Staff can schedule
+Next Visit 
+Reminder Date 
+Follow-up Notes 
+Assigned Staff 
+Follow-up automatically appears on dashboard.
+
+14. Check-Out
+Staff clicks
+Check-Out
+System stores
+End Time 
+Total Visit Duration 
+GPS (Optional) 
+Remarks 
+Status
+COMPLETED
+
+15. Visit Timeline
+Displays
+Visit Scheduled      ↓Reminder Sent      ↓Check-In      ↓Products Recommended      ↓Follow-Up Created      ↓Check-Out      ↓Visit Closed
+
+16. Visit Dashboard
+Cards
+Today's Visits 
+Completed Visits 
+Pending Visits 
+Missed Visits 
+Follow-Ups Due 
+Product Demonstrations 
+Payment Collection Visits 
+Charts
+Staff-wise Visits 
+Village-wise Visits 
+Visit Outcomes 
+Monthly Visit Trend 
+
+17. Farmer Visit History
+Displays
+Visit Date 
+Staff 
+Purpose 
+Outcome 
+Products Recommended 
+Images 
+Notes 
+Follow-Up Date 
+
+18. Visit Notifications
+Automatic Notifications
+Visit Assigned 
+Visit Reminder 
+Follow-Up Reminder 
+Missed Visit Alert 
+Visit Completed 
+Channels
+Dashboard 
+WhatsApp 
+SMS 
+Email 
+
+19. REST APIs
+Create Visit
+POST /api/v1/visits
+Get Visits
+GET /api/v1/visits
+Visit Details
+GET /api/v1/visits/{id}
+Check-In
+POST /api/v1/visits/{id}/check-in
+Check-Out
+POST /api/v1/visits/{id}/check-out
+Upload Images
+POST /api/v1/visits/{id}/images
+Create Follow-Up
+POST /api/v1/visits/{id}/follow-up
+
+20. Database Tables
+visits
+id 
+dealer_id 
+farmer_id 
+staff_id 
+visit_type 
+visit_date 
+start_time 
+end_time 
+priority 
+status 
+purpose 
+outcome 
+
+visit_notes
+id 
+visit_id 
+notes 
+recommendation 
+
+visit_images
+id 
+visit_id 
+image_url 
+
+follow_ups
+id 
+visit_id 
+follow_up_date 
+assigned_staff 
+status 
+
+visit_products
+id 
+visit_id 
+product_id 
+quantity 
+remarks 
+
+21. Audit Logs
+Track
+Visit Scheduled 
+Visit Updated 
+Check-In 
+Check-Out 
+Follow-Up Created 
+Images Uploaded 
+Visit Cancelled 
+
+22. Security
+Staff can view only assigned visits. 
+Dealer Admin can view all visits. 
+Images require authenticated access. 
+Visit records cannot be permanently deleted. 
+All APIs validate dealer_id. 
+
+23. Edge Cases
+Staff forgets to check out. 
+Multiple staff assigned to one visit. 
+Farmer unavailable. 
+Visit cancelled after check-in. 
+Internet disconnects during visit entry. 
+Duplicate follow-up creation. 
+GPS unavailable. 
+
+24. Acceptance Criteria
+✅ Visits can be scheduled.
+✅ Staff can check in and check out.
+✅ Follow-ups work correctly.
+✅ Product recommendations are linked to the farmer.
+✅ Visit history is maintained.
+✅ Dashboard updates automatically.
+✅ Notifications are sent.
+
+25. Enterprise Features Added
+Field CRM 
+Staff Visit Calendar 
+Check-In / Check-Out 
+GPS Ready 
+Image Management 
+Product Recommendation Engine 
+Follow-Up Scheduler 
+Visit Analytics 
+Farmer Timeline Integration 
+Dashboard Integration 
+Notification Integration 
+Audit Trail
+
+
+
+Module 15 – Notification & Communication Center
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: © SoftEdgeX Technologies. All Rights Reserved.
+
+1. Module Overview
+Purpose
+The Notification & Communication Center manages all outgoing communications from the system.
+It sends automated and manual messages to:
+Farmers 
+Dealer Admin 
+Staff 
+Super Admin 
+Communication Channels
+WhatsApp Business API 
+SMS (MSG91) 
+Email (SendGrid) 
+In-App Notifications 
+Push Notifications (Future) 
+
+2. Business Objectives
+The system shall
+Send automated reminders. 
+Send promotional campaigns. 
+Send invoices. 
+Notify low stock. 
+Notify subscription expiry. 
+Notify payment due. 
+Track message delivery. 
+Maintain communication history. 
+
+3. User Roles
+Role
+Access
+Super Admin
+Full Access
+Dealer Admin
+Full Access
+Staff
+Limited (Permission Based)
+
+4. Notification Categories
+Business Notifications
+Invoice Generated 
+Payment Received 
+Credit Due 
+Credit Overdue 
+Collection Reminder 
+Inventory Notifications
+Low Stock 
+Out Of Stock 
+Product Expiry 
+Damaged Stock 
+Subscription Notifications
+Subscription Activated 
+Subscription Expiring 
+Subscription Renewed 
+Payment Failed 
+Visit Notifications
+Visit Assigned 
+Visit Reminder 
+Follow-up Reminder 
+System Notifications
+Password Changed 
+Login Alert 
+New Staff Added 
+Account Suspended 
+Marketing Notifications
+Festival Wishes 
+Seasonal Offers 
+Product Launches 
+Discount Campaigns 
+
+5. Notification Workflow
+Event Triggered↓Template Selected↓Recipient Identified↓Channel Selected↓Message Generated↓Message Sent↓Delivery Status Updated↓Communication History Saved
+
+6. WhatsApp Integration
+Provider
+Meta WhatsApp Business API
+Supported Messages
+Invoice PDF 
+Payment Reminder 
+Credit Reminder 
+Visit Reminder 
+Product Promotion 
+Festival Greetings 
+Subscription Reminder 
+Attachments
+PDF 
+Image 
+Product Brochure 
+
+7. SMS Integration
+Provider
+MSG91
+Usage
+OTP 
+Payment Reminder 
+Credit Reminder 
+Subscription Expiry 
+Visit Reminder 
+
+8. Email Integration
+Provider
+SendGrid
+Supports
+HTML Emails 
+Invoice PDF 
+Reports 
+Payment Receipts 
+Promotional Emails 
+
+9. In-App Notifications
+Displayed inside dashboard.
+Examples
+New Payment Received 
+Low Stock Alert 
+New Visit Assigned 
+Subscription Expiry 
+Product Expiry 
+Status
+Unread 
+Read 
+Archived 
+
+10. Notification Templates
+Dealer can customize templates.
+Example
+Payment Reminder
+Dear {{FarmerName}},Your outstanding balance is ₹{{Amount}}.Please make the payment before {{DueDate}}.Regards,{{DealerName}}
+Variables
+FarmerName 
+DealerName 
+Amount 
+InvoiceNumber 
+DueDate 
+ProductName 
+VisitDate 
+
+11. Broadcast Messages
+Dealer can send one message to multiple farmers.
+Filters
+Village 
+Crop 
+Outstanding Credit 
+Purchase History 
+Product Purchased 
+Last Visit 
+Custom Selection 
+Examples
+Monsoon Fertilizer Offer 
+New Product Launch 
+Festival Wishes 
+Shop Closed Notice 
+
+12. Scheduled Notifications
+Dealer schedules messages.
+Examples
+Tomorrow at 9 AM 
+Every Monday 
+Every Month 
+Every Festival 
+Supports recurring schedules.
+
+13. Automatic Reminder Engine
+Triggers
+Credit Due 
+Overdue Payment 
+Subscription Expiry 
+Visit Reminder 
+Product Expiry 
+Low Stock 
+Staff Tasks 
+No manual action required.
+
+14. Message History
+Displays
+Date 
+Recipient 
+Channel 
+Message Type 
+Status 
+Delivery Time 
+Sent By 
+Filters
+WhatsApp 
+SMS 
+Email 
+In-App 
+
+15. Delivery Status
+Possible Status
+QUEUED 
+SENT 
+DELIVERED 
+READ (WhatsApp) 
+FAILED 
+RETRYING 
+
+16. Retry Mechanism
+If message fails
+↓
+Retry after 5 Minutes
+↓
+Retry after 15 Minutes
+↓
+Retry after 1 Hour
+↓
+Mark Failed
+Admin receives alert.
+
+17. Campaign Management
+Dealer can create campaigns.
+Campaign Fields
+Campaign Name 
+Target Audience 
+Start Date 
+End Date 
+Channel 
+Message Template 
+Statistics
+Total Sent 
+Delivered 
+Failed 
+Read 
+Click Rate (Future) 
+
+18. Communication Timeline
+Every Farmer Profile shows
+SMS Sent 
+WhatsApp Sent 
+Email Sent 
+Call Notes 
+Campaign Messages 
+Complete communication history.
+
+19. Notification Preferences
+Dealer configures
+Enable / Disable
+SMS 
+WhatsApp 
+Email 
+Dashboard Notifications 
+Can configure event-wise.
+
+20. REST APIs
+Send WhatsApp
+POST /api/v1/notifications/whatsapp
+Send SMS
+POST /api/v1/notifications/sms
+Send Email
+POST /api/v1/notifications/email
+Create Campaign
+POST /api/v1/notifications/campaigns
+Get Notification History
+GET /api/v1/notifications/history
+Mark Notification Read
+PUT /api/v1/notifications/{id}/read
+
+21. Database Tables
+notification_templates
+id 
+dealer_id 
+template_name 
+channel 
+message_body 
+status 
+
+notifications
+id 
+dealer_id 
+recipient_type 
+recipient_id 
+channel 
+message 
+status 
+sent_at 
+
+campaigns
+id 
+dealer_id 
+campaign_name 
+start_date 
+end_date 
+status 
+
+campaign_recipients
+id 
+campaign_id 
+farmer_id 
+delivery_status 
+
+notification_logs
+id 
+notification_id 
+response 
+retry_count 
+created_at 
+
+22. Security
+API credentials encrypted. 
+Template editing restricted. 
+Dealer accesses only own communication history. 
+Rate limiting for bulk messaging. 
+Sensitive data masked in logs. 
+
+23. Audit Logs
+Track
+Template Created 
+Template Updated 
+Message Sent 
+Campaign Created 
+Campaign Cancelled 
+Notification Failed 
+Retry Executed 
+
+24. Edge Cases
+Farmer has no mobile number. 
+Invalid WhatsApp number. 
+SMS gateway unavailable. 
+Email bounces. 
+Duplicate reminder. 
+Campaign interrupted. 
+API rate limit exceeded. 
+Internet outage during sending. 
+
+25. Acceptance Criteria
+✅ WhatsApp messages sent successfully.
+✅ SMS delivery works.
+✅ Email notifications work.
+✅ Broadcast campaigns execute correctly.
+✅ Scheduled reminders trigger automatically.
+✅ Message history maintained.
+✅ Delivery status tracked.
+✅ Retry mechanism handles failures.
+
+26. Enterprise Features Added
+WhatsApp Business API Integration 
+SMS Gateway Integration 
+Email Integration 
+In-App Notifications 
+Broadcast Messaging 
+Scheduled Campaigns 
+Template Engine 
+Dynamic Variables 
+Delivery Tracking 
+Retry Engine 
+Communication Timeline 
+Notification Preferences 
+Audit Trail
+
+
+
+
+
+
+
+Module 16 – Reports & Business Intelligence (BI)
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: © SoftEdgeX Technologies. All Rights Reserved.
+
+1. Module Overview
+Purpose
+The Reports & BI module provides real-time insights into business performance by generating operational, financial, inventory, customer, and staff reports.
+Reports help dealers make informed business decisions.
+
+2. Business Objectives
+The system shall
+Generate business reports. 
+Provide KPI dashboards. 
+Support graphical analytics. 
+Export reports. 
+Schedule reports. 
+Email reports automatically. 
+Compare business performance. 
+
+3. User Roles
+Role
+Permission
+Super Admin
+Platform Reports
+Dealer Admin
+All Business Reports
+Staff
+Permission Based
+
+4. Report Categories
+Sales Reports
+Daily Sales 
+Weekly Sales 
+Monthly Sales 
+Annual Sales 
+Product-wise Sales 
+Farmer-wise Sales 
+Staff-wise Sales 
+Category-wise Sales 
+Village-wise Sales 
+Payment Mode-wise Sales 
+Invoice Summary 
+
+Purchase Reports
+Daily Purchases 
+Supplier-wise Purchases 
+Product-wise Purchases 
+Pending Purchase Orders 
+Purchase Returns 
+Purchase Cost Analysis 
+
+Inventory Reports
+Current Stock 
+Low Stock 
+Out of Stock 
+Inventory Valuation 
+Batch Report 
+Stock Movement 
+Damaged Stock 
+Expired Products 
+Reorder Report 
+
+Farmer Reports
+Farmer Directory 
+New Farmers 
+Active Farmers 
+Inactive Farmers 
+Top Purchasing Farmers 
+Farmer Purchase Summary 
+Farmer Credit Summary 
+Village-wise Farmers 
+
+Credit Reports
+Outstanding Report 
+Collection Report 
+Overdue Report 
+Aging Analysis 
+Credit Recovery 
+Credit Limit Utilization 
+
+Supplier Reports
+Supplier Directory 
+Outstanding Payments 
+Purchase Summary 
+Supplier Rating 
+Supplier Performance 
+
+Staff Reports
+Sales Performance 
+Collection Performance 
+Visit Performance 
+Attendance (Future) 
+Productivity 
+
+Financial Reports
+Revenue Summary 
+Profit Analysis 
+Expense Summary (Future) 
+Cash Flow 
+Tax Summary 
+Monthly Income 
+
+GST Reports
+GSTR Sales Summary 
+GST Collected 
+GST Paid 
+HSN Summary 
+
+5. Dashboard KPIs
+Dealer Dashboard
+Displays
+Today's Sales 
+Monthly Sales 
+Outstanding Credit 
+Inventory Value 
+Total Farmers 
+Total Products 
+Active Staff 
+Pending Collections 
+Subscription Status 
+
+Super Admin Dashboard
+Displays
+Total Dealers 
+Active Subscriptions 
+Monthly Revenue 
+Failed Payments 
+New Registrations 
+Platform Growth 
+
+6. Charts
+Supported Charts
+Line Chart 
+Bar Chart 
+Pie Chart 
+Donut Chart 
+Area Chart 
+Examples
+Monthly Sales Trend 
+Revenue Growth 
+Product Distribution 
+Credit Recovery 
+Inventory Value 
+Top Products 
+
+7. Filters
+Every report supports
+Date Range 
+Product 
+Farmer 
+Supplier 
+Staff 
+Village 
+Category 
+Payment Mode 
+Invoice Status 
+
+8. Export Options
+Supported Formats
+PDF 
+Excel (XLSX) 
+CSV 
+Dealer can choose
+Portrait/Landscape 
+Include Charts 
+Include Company Logo 
+Include Filters Applied 
+
+9. Scheduled Reports
+Dealer can schedule reports.
+Examples
+Daily Sales Report at 9 PM 
+Weekly Inventory Report 
+Monthly Profit Report 
+Delivery
+Email 
+Dashboard 
+
+10. Saved Reports
+Dealer can save frequently used report filters.
+Example
+Monthly Sales 
+Village-wise Credit 
+Top Customers 
+One click generates the report.
+
+11. Profit Analysis
+Displays
+Sales Revenue 
+Purchase Cost 
+Gross Profit 
+Gross Margin % 
+Product-wise Profit 
+Category-wise Profit 
+Visible only to Dealer Admin.
+
+12. Inventory Analytics
+Shows
+Fast Moving Products 
+Slow Moving Products 
+Dead Stock 
+Inventory Turnover 
+Stock Aging 
+Reorder Suggestions 
+
+13. Customer Analytics
+Shows
+Top 10 Farmers 
+Repeat Customers 
+Average Purchase Value 
+Seasonal Buying Pattern 
+
+14. Staff Analytics
+Displays
+Sales 
+Collections 
+Visits 
+New Farmers Added 
+Targets Achieved (Future) 
+
+15. Report Workflow
+Select Report      ↓Apply Filters      ↓Generate Data      ↓Render Charts      ↓Display Report      ↓Export / Print / Email
+
+16. REST APIs
+Generate Report
+POST /api/v1/reports/generate
+Export Report
+GET /api/v1/reports/export
+Schedule Report
+POST /api/v1/reports/schedule
+Get Dashboard
+GET /api/v1/dashboard/analytics
+
+17. Database Tables
+report_templates
+id 
+dealer_id 
+report_name 
+filters 
+created_at 
+
+scheduled_reports
+id 
+dealer_id 
+report_name 
+frequency 
+delivery_channel 
+next_run 
+
+report_history
+id 
+report_name 
+generated_by 
+generated_at 
+export_format 
+
+18. Notifications
+Automatic
+Scheduled Report Ready 
+Monthly Business Summary 
+Weekly Sales Summary 
+Low Profit Alert 
+Low Stock Summary 
+
+19. Security
+Reports limited by role. 
+Dealer can access only their own reports. 
+Profit reports restricted. 
+Report downloads logged. 
+Export permissions configurable. 
+
+20. Audit Logs
+Track
+Report Generated 
+Report Exported 
+Report Scheduled 
+Report Deleted 
+Report Shared 
+
+21. Edge Cases
+Large reports (10,000+ records). 
+Export interrupted. 
+Empty report results. 
+Invalid filter combinations. 
+Scheduled report fails. 
+Simultaneous report generation. 
+
+22. Acceptance Criteria
+✅ Reports generate correctly.
+✅ Charts display accurate data.
+✅ Exports work in PDF, Excel, and CSV.
+✅ Scheduled reports execute automatically.
+✅ Filters return correct results.
+✅ Dashboard KPIs update in real time.
+
+23. Enterprise Features Added
+Business Intelligence Dashboard 
+KPI Cards 
+Interactive Charts 
+Scheduled Reports 
+Email Delivery 
+Saved Report Templates 
+Inventory Analytics 
+Customer Analytics 
+Profit Analysis 
+GST Reports 
+Export Engine 
+Audit Trail
+
+
+
+Module 17 – Master Data & System Configuration
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: © SoftEdgeX Technologies. All Rights Reserved.
+
+1. Module Overview
+Purpose
+The Master Data & System Configuration module manages all reusable business data and application settings.
+Instead of storing duplicate values in multiple tables, the application references master records.
+This ensures:
+Data consistency 
+Easier maintenance 
+Faster development 
+Better reporting 
+Future scalability 
+
+2. Business Objectives
+The system shall
+Manage all master data. 
+Allow business configuration. 
+Support customizable numbering. 
+Store tax configuration. 
+Configure business preferences. 
+Reduce duplicate data. 
+
+3. User Roles
+Role
+Permission
+Super Admin
+Full Access
+Dealer Admin
+Business Masters & Settings
+Staff
+View Only (Optional)
+
+4. Master Data Categories
+Geographic Masters
+Country 
+State 
+District 
+Taluka 
+Village 
+PIN Code 
+
+Product Masters
+Product Category 
+Product Brand 
+Unit of Measurement 
+Product Tags 
+HSN Code 
+GST Rate 
+
+Agriculture Masters
+Crop 
+Crop Variety 
+Soil Type 
+Irrigation Type 
+Water Source 
+Farming Method 
+Season 
+
+Business Masters
+Department 
+Designation 
+Payment Mode 
+Visit Type 
+Supplier Category 
+Farmer Category 
+
+Financial Masters
+Tax Configuration 
+Currency 
+Financial Year 
+Invoice Prefix 
+Purchase Prefix 
+Receipt Prefix 
+Credit Note Prefix 
+
+5. Geographic Master
+Dealer maintains
+State
+↓
+District
+↓
+Taluka
+↓
+Village
+Farmer Registration uses these masters.
+Duplicate village names are prevented within the same district.
+
+6. Product Category Master
+Default
+Fertilizer 
+Seed 
+Pesticide 
+Herbicide 
+Fungicide 
+Micronutrient 
+Bio Fertilizer 
+Equipment 
+Dealer can
+Add
+Edit
+Deactivate
+Categories already used in transactions cannot be deleted.
+
+7. Brand Master
+Stores
+Brand Name 
+Manufacturer 
+Country 
+Status 
+Used by Product Management.
+
+8. Unit Master
+Supported Units
+Bag 
+Kg 
+Gram 
+Liter 
+ml 
+Packet 
+Bottle 
+Piece 
+Box 
+Dealer can add custom units.
+
+9. GST Master
+Fields
+GST Rate 
+CGST 
+SGST 
+IGST 
+Effective Date 
+Status 
+Supports multiple tax rates.
+Example
+0% 
+5% 
+12% 
+18% 
+28% 
+
+10. Crop Master
+Stores
+Crop Name 
+Season 
+Category 
+Status 
+Examples
+Cotton 
+Sugarcane 
+Soybean 
+Wheat 
+Rice 
+Onion 
+Tomato 
+Maize 
+Used during Farmer Registration.
+
+11. Soil Master
+Default
+Black Soil 
+Red Soil 
+Sandy Soil 
+Clay Soil 
+Loamy Soil 
+Dealer can add more.
+
+12. Payment Mode Master
+Default
+Cash 
+UPI 
+Credit 
+Debit Card 
+Net Banking 
+Cheque 
+Future payment methods can be added without code changes.
+
+13. Visit Type Master
+Default
+Sales Visit 
+Collection Visit 
+Complaint 
+Product Demo 
+Crop Inspection 
+Follow-up 
+Dealer can create custom visit types.
+
+14. Department Master
+Examples
+Sales 
+Inventory 
+Accounts 
+Administration 
+Field Operations 
+
+15. Number Series Configuration
+Dealer can configure numbering formats.
+Invoice
+INV-2026-000001
+Purchase Order
+PO-2026-000001
+Goods Receipt
+GRN-2026-000001
+Receipt
+RCPT-2026-000001
+Credit Note
+CN-2026-000001
+Options
+Prefix 
+Suffix 
+Financial Year 
+Running Number 
+Reset Every Year 
+
+16. Business Profile
+Dealer configures
+Shop Name 
+Logo 
+GST Number 
+Address 
+Contact Details 
+Website 
+Business Hours 
+Currency 
+Time Zone 
+Automatically appears on
+Invoice 
+Reports 
+Receipts 
+
+17. Invoice Configuration
+Dealer can configure
+Logo Position 
+Footer 
+Terms & Conditions 
+Signature 
+QR Code 
+Payment Instructions 
+
+18. Notification Configuration
+Enable / Disable
+WhatsApp 
+SMS 
+Email 
+In-App 
+Configure event-wise notifications.
+
+19. Backup Configuration
+Dealer can
+Export Business Data 
+Download Backup 
+Schedule Backup (Future) 
+Super Admin manages platform backups.
+
+20. Data Import
+Import
+Farmers 
+Products 
+Suppliers 
+Inventory 
+Master Data 
+Formats
+Excel 
+CSV 
+Validation before import.
+
+21. Data Export
+Export
+Farmers 
+Products 
+Inventory 
+Sales 
+Purchases 
+Reports 
+Master Data 
+Formats
+PDF 
+Excel 
+CSV 
+
+22. REST APIs
+Get Masters
+GET /api/v1/masters
+Create Master
+POST /api/v1/masters
+Update Master
+PUT /api/v1/masters/{id}
+Delete Master
+DELETE /api/v1/masters/{id}
+Import Master Data
+POST /api/v1/masters/import
+Export Master Data
+GET /api/v1/masters/export
+
+23. Database Tables
+master_states
+id 
+state_name 
+
+master_districts
+id 
+state_id 
+district_name 
+
+master_talukas
+id 
+district_id 
+taluka_name 
+
+master_villages
+id 
+taluka_id 
+village_name 
+
+master_product_categories
+id 
+category_name 
+
+master_brands
+id 
+brand_name 
+
+master_units
+id 
+unit_name 
+
+master_crops
+id 
+crop_name 
+
+master_soil_types
+id 
+soil_name 
+
+master_gst_rates
+id 
+gst_percentage 
+
+numbering_sequences
+id 
+module_name 
+prefix 
+suffix 
+current_number 
+
+business_settings
+dealer_id 
+setting_key 
+setting_value 
+
+24. Security
+Only authorized users can modify master data. 
+Masters used in transactions cannot be deleted. 
+Use soft delete for inactive records. 
+All changes are versioned. 
+Every API validates dealer_id. 
+
+25. Audit Logs
+Track
+Master Created 
+Master Updated 
+Master Deleted 
+Business Settings Changed 
+Number Series Changed 
+Import Executed 
+Export Executed 
+
+26. Edge Cases
+Duplicate village names. 
+GST rate updated while invoices are open. 
+Category deletion with active products. 
+Number sequence reaches maximum value. 
+Import file contains duplicate records. 
+Master deactivated while referenced by existing data. 
+
+27. Acceptance Criteria
+✅ Master data managed centrally.
+✅ Dropdowns use master records.
+✅ Number series configurable.
+✅ Business settings reflected across the application.
+✅ Import/export works correctly.
+✅ Audit logs generated for all changes.
+
+28. Enterprise Features Added
+Centralized Master Data Management 
+Configurable Number Series 
+Business Profile Management 
+Invoice Template Configuration 
+Tax Configuration 
+Data Import & Export 
+Business Settings 
+Notification Preferences 
+Backup Readiness 
+Versioned Master Data 
+Audit Trail
+
+
+
+Module 18 – Platform Administration, Audit Logs & Security
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: © SoftEdgeX Technologies. All Rights Reserved.
+
+1. Module Overview
+Purpose
+This module manages platform administration, system security, audit logging, backups, monitoring, maintenance, licensing, and global settings.
+It provides complete control over the platform while ensuring accountability, compliance, and data protection.
+
+2. Business Objectives
+The system shall
+Track every critical action. 
+Secure business data. 
+Monitor platform health. 
+Configure global settings. 
+Perform backup & restore. 
+Control user sessions. 
+Manage platform licenses. 
+Support future scalability. 
+
+3. User Roles
+Role
+Access
+Super Admin
+Full Access
+Dealer Admin
+Limited (Own Business Settings)
+Staff
+No Access
+
+4. Audit Logs
+Every critical action must be recorded.
+Examples
+Login 
+Logout 
+Failed Login 
+Password Change 
+Dealer Created 
+Farmer Added 
+Product Updated 
+Purchase Created 
+Sales Invoice Generated 
+Payment Received 
+Credit Updated 
+Report Exported 
+Settings Changed 
+Audit Log Fields
+Log ID 
+Module 
+Action 
+User 
+Dealer 
+IP Address 
+Device 
+Browser 
+Timestamp 
+Old Value 
+New Value 
+Status 
+Audit logs cannot be modified or deleted.
+
+5. User Activity Monitoring
+Track
+Last Login 
+Last Activity 
+Active Sessions 
+Login Duration 
+Failed Login Attempts 
+Browser 
+Device 
+IP Address 
+Dashboard shows
+Currently Online Users 
+Active Dealer Sessions 
+Active Staff Sessions 
+
+6. Session Management
+System stores
+Login Time 
+Last Activity 
+Device 
+Browser 
+IP Address 
+Session Expiry 
+Super Admin can
+View Sessions 
+Terminate Sessions 
+Force Logout Users 
+Dealer Admin can terminate sessions of their own staff.
+
+7. Password Policy
+Configurable
+Minimum Length
+Default
+8 Characters
+Must contain
+Uppercase 
+Lowercase 
+Number 
+Special Character 
+Optional
+Password Expiry (90 Days) 
+Password History (Last 5) 
+First Login Password Change 
+
+8. Login Policy
+Configure
+Maximum Failed Attempts 
+Account Lock Duration 
+Concurrent Sessions 
+Session Timeout 
+Office Hours Login 
+Device Restrictions (Future) 
+IP Whitelisting (Future) 
+
+9. Security Policies
+Enforce
+HTTPS 
+JWT Authentication 
+Refresh Tokens 
+RBAC 
+CSRF Protection 
+XSS Protection 
+SQL Injection Protection 
+File Upload Validation 
+Rate Limiting 
+Input Validation 
+
+10. Backup Management
+Super Admin
+Manual Backup 
+Scheduled Backup 
+Download Backup 
+Restore Backup 
+Dealer Admin
+Export Business Data 
+Backup Includes
+Database 
+Documents 
+Images 
+Configuration 
+
+11. File Storage
+Storage
+AWS S3
+Stores
+Product Images 
+Farmer Documents 
+Supplier Documents 
+Invoice PDFs 
+Visit Images 
+Reports 
+Supports
+Upload 
+Download 
+Preview 
+Delete (Permission Based) 
+
+12. System Health Dashboard
+Displays
+CPU Usage 
+Memory Usage 
+Disk Usage 
+Database Status 
+Redis Status 
+API Response Time 
+Storage Usage 
+Active Users 
+Failed Jobs 
+
+13. Error Logging
+Automatically logs
+Application Errors 
+API Exceptions 
+Database Errors 
+Payment Gateway Errors 
+Notification Failures 
+Each log contains
+Error ID 
+Stack Trace 
+API Endpoint 
+User 
+Timestamp 
+Severity 
+
+14. Maintenance Mode
+Super Admin can
+Enable Maintenance Mode
+Effects
+Staff cannot log in. 
+Dealer Admin sees maintenance message. 
+Super Admin retains access. 
+Display Message
+System is under scheduled maintenance.Please try again later.
+
+15. License Management
+Stores
+Dealer License 
+Subscription Status 
+Activation Date 
+Expiry Date 
+Version 
+Enabled Modules 
+Future Ready
+Premium Modules 
+Add-on Features 
+
+16. Feature Flags
+Enable or Disable modules without deployment.
+Examples
+AI Advisory 
+WhatsApp 
+SMS 
+Inventory 
+Purchase Module 
+Useful for beta testing.
+
+17. API Monitoring
+Track
+API Calls 
+Response Time 
+Failed Requests 
+Unauthorized Requests 
+Slow APIs 
+Generate API performance reports.
+
+18. Notification Monitoring
+Displays
+WhatsApp Queue 
+SMS Queue 
+Email Queue 
+Failed Messages 
+Retry Count 
+
+19. Database Maintenance
+Features
+Database Cleanup 
+Index Optimization 
+Log Cleanup 
+Archive Old Records 
+Storage Analysis 
+
+20. Platform Dashboard
+Super Admin Dashboard
+Displays
+Total Dealers 
+Active Users 
+Active Sessions 
+Platform Revenue 
+API Health 
+Database Health 
+Storage Usage 
+Backup Status 
+Failed Jobs 
+System Alerts 
+
+21. REST APIs
+Get Audit Logs
+GET /api/v1/admin/audit-logs
+Get Active Sessions
+GET /api/v1/admin/sessions
+Force Logout
+POST /api/v1/admin/logout-user
+Backup Database
+POST /api/v1/admin/backup
+Restore Backup
+POST /api/v1/admin/restore
+Enable Maintenance
+PUT /api/v1/admin/maintenance
+System Health
+GET /api/v1/admin/system-health
+Feature Flags
+PUT /api/v1/admin/features
+
+22. Database Tables
+audit_logs
+id 
+dealer_id 
+user_id 
+module 
+action 
+old_value 
+new_value 
+ip_address 
+browser 
+device 
+created_at 
+
+user_sessions
+id 
+user_id 
+login_time 
+logout_time 
+ip_address 
+browser 
+device 
+status 
+
+system_settings
+id 
+setting_key 
+setting_value 
+
+feature_flags
+id 
+feature_name 
+enabled 
+
+backup_history
+id 
+backup_name 
+backup_date 
+status 
+
+error_logs
+id 
+error_type 
+endpoint 
+stack_trace 
+severity 
+created_at 
+
+23. Security
+Audit logs are immutable. 
+Sensitive fields are encrypted. 
+JWT required for all protected APIs. 
+Backups encrypted before storage. 
+Passwords stored using BCrypt. 
+File uploads scanned and validated. 
+Every request validated against dealer_id. 
+
+24. Audit Logs
+Track
+User Login 
+Password Changes 
+Master Updates 
+Purchase Approval 
+Invoice Generation 
+Credit Collections 
+Configuration Changes 
+Backup Operations 
+API Failures 
+Maintenance Mode Changes 
+
+25. Edge Cases
+Backup interrupted. 
+Restore fails. 
+Multiple maintenance requests. 
+Concurrent session termination. 
+Corrupt uploaded file. 
+Database connection loss. 
+JWT token replay attack. 
+
+26. Acceptance Criteria
+✅ Complete audit trail maintained.
+✅ Active sessions monitored.
+✅ Backups created and restored successfully.
+✅ Security policies enforced.
+✅ Maintenance mode functions correctly.
+✅ Feature flags work without deployment.
+✅ Platform health monitored.
+
+27. Enterprise Features Added
+Immutable Audit Logs 
+Platform Monitoring Dashboard 
+Session Management 
+Security Policies 
+Backup & Restore 
+Feature Flags 
+API Monitoring 
+Error Logging 
+Maintenance Mode 
+License Management 
+File Storage Management 
+System Health Dashboard

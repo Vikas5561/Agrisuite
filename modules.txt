@@ -1,0 +1,66 @@
+3: Module 01 – Authentication & Authorization
+9: 1. Module Overview
+13: This module is the entry point of the entire system.
+177: Module
+360: Module 02 – Subscription Management
+366: 1. Module Overview
+369: This module determines what features a dealer can use based on the purchased subscription.
+370: This module does not handle payments. Payment processing is handled separately in Module 03.
+446: Business modules blocked.
+695: Module 03 – Payment Management
+701: 1. Module Overview
+704: This module never decides which features a dealer can access. It only handles payment transactions.
+1211: MODULE 04 – Dashboard
+1212: 1. Module Overview
+1468: Module 05 – Dealer Management
+1474: 1. Module Overview
+1482: The module shall:
+1606: Only ACTIVE dealers can use business modules.
+1780: Module 06 – Staff Management
+1786: 1. Module Overview
+1793: The module shall:
+1898: Farmer Module
+1904: Product Module
+2111: module
+2141: Staff can access only assigned modules.
+2170: ✅ Module-level permissions are enforced.
+2187: Module 07 – Farmer Management
+2193: 1. Module Overview
+2197: Integrated Modules
+2575: Module 08 – Product Management
+2581: 1. Module Overview
+2963: ✅ Inventory module can use products directly.
+2966: To make SoftEdgeX more competitive, this module also supports:
+2996: Module 09 – Inventory Management
+3002: 1. Module Overview
+3004: The Inventory Management module manages the complete stock lifecycle of every product.
+3006: This module acts as the Inventory Engine for the entire application.
+3337: Module 10 – Supplier Management
+3343: 1. Module Overview
+3347: This module acts as the Vendor Management System (VMS) of SoftEdgeX AgriSuite.
+3739: Module 11 – Purchase Management
+3745: 1. Module Overview
+3756: This module automatically updates inventory after successful goods receipt.
+4097: Module 12 – Sales & Billing
+4103: 1. Module Overview
+4106: This module automatically updates:
+4497: Module 13 – Credit (Udhar) Management
+4503: 1. Module Overview
+4562: Credit entries are automatically created from the Sales module.
+4844: Module 14 – Visit Tracking (Field Visit Management)
+4850: 1. Module Overview
+5161: Module 15 – Notification & Communication Center
+5167: 1. Module Overview
+5519: Module 16 – Reports & Business Intelligence (BI)
+5525: 1. Module Overview
+5832: Module 17 – Master Data & System Configuration
+5838: 1. Module Overview
+6175: module_name
+6233: Module 18 – Platform Administration, Audit Logs & Security
+6239: 1. Module Overview
+6283: Module
+6437: Enabled Modules
+6439: Premium Modules
+6443: Enable or Disable modules without deployment.
+6449: Purchase Module
+6514: module

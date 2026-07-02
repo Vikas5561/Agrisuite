@@ -1,0 +1,90 @@
+3.1 Super Admin
+3.2 Dealer Admin
+3.3 Staff
+5
+Lock Duration
+30 Minutes
+6 Digits 
+5
+Staff
+15 Minutes
+7 Days
+401
+Invalid Token
+401
+Token Expired
+401
+Access Denied
+403
+User Not Found
+404
+Validation Failed
+400
+Server Error
+1 Month
+3 Months
+6 Months
+12 Months
+30 July
+12 Month Plan
+30 July Next Year
+7 Days
+30 Days Before
+15 Days Before
+7 Days Before
+3 Days Before
+1 Day Before
+1 Month
+12 Months
+403
+Message
+25.1 Coupon Types
+15 Days Free
+30 Days Free
+25.2 Coupon Fields
+25.3 Coupon Workflow
+25.4 Validation Rules
+25.5 Invalid Coupon Messages
+25.6 Referral Program
+25.7 Referral Rewards
+1 Month Free Extension
+25.8 Referral Rules
+25.9 Super Admin Features
+25.10 Dealer Screen
+25.11 Database Tables
+25.12 APIs
+25.13 Notifications
+25.14 Audit Logs
+25.15 Acceptance Criteria
+1 Month      25%3 Months     30%6 Months     20%12 Months    25%
+2 MB
+9 AM – 5 PM
+1 PM – 9 PM
+10 AM – 6 PM
+9 AM – 8 PM
+01 JanFarmer Created↓05 JanPurchased Urea↓20 JanCredit Given↓25 JanPayment Received↓10 FebVisit Completed↓15 FebSMS Reminder Sent
+5 Images
+3 MB
+90 Days
+60 Days
+30 Days
+15 Days
+7 Days
+10 Digits
+10 MB
+100 Bags
+60 Bags
+40 Bags
+30 Days
+15 Days 
+30 Days 
+45 Days 
+60 Days 
+7 Days Before Due Date
+3 Days Before
+3 Days After
+7 Days After
+15 Days After
+30 Days After
+10 Images
+8 Characters

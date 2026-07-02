@@ -1,0 +1,201 @@
+﻿<USER_REQUEST>
+SoftEdgeX AgriSuite
+Functional & Technical Design Specification (FTDS)
+Module 01 â€“ Authentication & Authorization
+Version: 1.0
+Product: SoftEdgeX AgriSuite
+Company: SoftEdgeX Technologies
+Copyright: Â© SoftEdgeX Technologies. All Rights Reserved.
+1. Module Overview
+Purpose
+The Authentication & Authorization module is responsible for authenticating users, authorizing
+access to application resources, managing sessions, enforcing role-based permissions, and
+protecting dealer data.
+Every user must be authenticated before accessing the application.
+This module is the entry point of the entire system.
+2. Business Objectives
+â€¢ Secure the application.
+â€¢ Support multiple dealers (Multi-Tenant).
+â€¢ Prevent unauthorized access.
+â€¢ Ensure each dealer accesses only their own data.
+â€¢ Maintain user sessions securely.
+â€¢ Maintain audit logs.
+â€¢ Support future mobile applications.
+3. User Roles
+3.1 Super Admin
+Description
+Owner of SoftEdgeX AgriSuite.
+Only SoftEdgeX Technologies can create this account.
+Permissions
+â€¢ Manage all dealers
+â€¢ Manage subscriptions
+â€¢ Create/Edit/Delete plans
+â€¢ View all payments
+â€¢ View all farmers
+â€¢ View all invoices
+â€¢ Suspend dealers
+â€¢ Activate dealers
+â€¢ Access all reports
+â€¢ Manage notifications
+â€¢ Manage master data
+â€¢ Configure system settings
+â€¢ View audit logs
+â€¢ Manage backups
+Restrictions
+None
+3.2 Dealer Admin
+Represents one fertilizer dealer.
+Permissions
+â€¢ Manage Staff
+â€¢ Manage Farmers
+â€¢ Manage Products
+â€¢ Manage Inventory
+â€¢ Manage Sales
+â€¢ Manage Credit
+â€¢ Manage Reports
+â€¢ Configure Shop
+Restrictions
+â€¢ Cannot access another dealer's data.
+â€¢ Cannot change platform settings.
+â€¢ Cannot modify subscription plans.
+3.3 Staff
+Belongs to one dealer.
+Permissions are assigned by Dealer Admin.
+Examples
+â€¢ Cashier
+â€¢ Inventory Manager
+â€¢ Sales Executive
+â€¢ Field Officer
+4. Login Screen
+UI Components
+Fields
+Field Required Validation
+Email Yes Valid email
+Field Requi
+<truncated 45215 bytes>
+ral Equipment
+â€¢ Irrigation Products
+â€¢ Others
+Dealer can create additional categories.
+5. Product Brands
+Dealer can maintain brands.
+Examples
+â€¢ UPL
+â€¢ Bayer
+â€¢ Syngenta
+â€¢ Coromandel
+â€¢ IFFCO
+â€¢ Rallis India
+â€¢ Tata Rallis
+â€¢ Custom Local Brands
+6. Add Product
+Navigation
+Dashboard
+â†“
+Product Management
+â†“
+Add Product
+â†“
+Save Product
+â†“
+Inventory Ready
+7. Product Registration
+Basic Information
+Field Required
+Product Code Auto
+Product Name Yes
+Short Name No
+Brand Yes
+Category Yes
+Product Type Yes
+Inventory Information
+Field Required
+Unit Yes
+Opening Stock Yes
+Minimum Stock Yes
+Maximum Stock No
+Reorder Level Yes
+Units
+â€¢ Bag
+â€¢ Bottle
+â€¢ Packet
+â€¢ Kg
+â€¢ Gram
+â€¢ Liter
+â€¢ ml
+â€¢ Piece
+â€¢ Box
+Pricing
+Field Required
+Purchase Price Yes
+Selling Price Yes
+MRP No
+GST % Yes
+Discount Allowed Yes
+Product Information
+Field Required
+Manufacturer No
+Batch Tracking Yes
+Expiry Applicable Yes
+HSN Code Yes
+Description No
+Images
+Dealer can upload
+â€¢ Product Image
+â€¢ Label
+â€¢ Brochure
+Stored in AWS S3.
+8. Product Code
+Auto Generated
+Example
+PRD000001
+PRD000002
+PRD000003
+Dealer can optionally use manufacturer SKU.
+9. Product Types
+â€¢ Fertilizer
+â€¢ Seed
+â€¢ Pesticide
+â€¢ Herbicide
+â€¢ Fungicide
+â€¢ Equipment
+â€¢ Other
+Used for reports and filtering.
+10. Product Status
+Possible values
+ACTIVE
+INACTIVE
+DISCONTINUED
+OUT_OF_STOCK
+EXPIRED
+Only ACTIVE products can be sold.
+11. Product List
+Columns
+â€¢ Product Code
+â€¢ Product Name
+â€¢ Brand
+â€¢ Category
+â€¢ Stock
+â€¢ Purchase Price
+â€¢ Selling Price
+â€¢ GST
+â€¢ Status
+Filters
+â€¢ Category
+â€¢ Brand
+â€¢ Product Type
+â€¢ Low Stock
+â€¢ Out of Stock
+â€¢ Active
+â€¢ Inactive
+â€¢ Expiring Soon
+Search
+â€¢ Product Name
+â€¢ Product Code
+â€¢ Barcode
+â€¢ Brand
+12. Barcode & QR Code
+Every product can ha
+<truncated 71368 bytes>
+
+NOTE: The output was truncated because it was too long. Use a more targeted query or a smaller range to get the information you need.
