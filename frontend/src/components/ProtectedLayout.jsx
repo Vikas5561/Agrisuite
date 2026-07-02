@@ -91,10 +91,19 @@ export const ProtectedLayout = ({ children, allowedRoles }) => {
         initial={{ x: -280 }}
         animate={{ x: 0 }}
         className="sidebar glass-panel"
-        style={{ margin: '1rem', height: 'calc(100vh - 2rem)', borderRadius: 'var(--radius-lg)' }}
+        style={{ 
+          margin: '1rem', 
+          height: 'calc(100vh - 2rem)', 
+          borderRadius: 'var(--radius-lg)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          overflow: 'hidden',
+          padding: '1.5rem 1.25rem'
+        }}
       >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', flexShrink: 0 }}>
             {user.logoUrl ? (
               <img 
                 src={user.logoUrl} 
@@ -124,7 +133,15 @@ export const ProtectedLayout = ({ children, allowedRoles }) => {
             </div>
           </div>
 
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <nav style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '0.35rem', 
+            overflowY: 'auto', 
+            flex: 1,
+            paddingRight: '4px',
+            marginBottom: '1rem'
+          }}>
             {links.map((link) => {
               const Icon = link.icon;
               const isActive = location.pathname === link.to;
@@ -136,17 +153,18 @@ export const ProtectedLayout = ({ children, allowedRoles }) => {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '1rem',
-                    padding: '0.85rem 1.25rem',
+                    padding: '0.75rem 1rem',
                     borderRadius: 'var(--radius-md)',
                     textDecoration: 'none',
                     color: isActive ? 'white' : 'var(--text-secondary)',
                     background: isActive ? 'linear-gradient(135deg, var(--accent-primary), #047857)' : 'transparent',
                     boxShadow: isActive ? '0 4px 12px var(--accent-glow)' : 'none',
                     transition: 'var(--transition-smooth)',
-                    fontWeight: 600
+                    fontWeight: 600,
+                    fontSize: '0.9rem'
                   }}
                 >
-                  <Icon size={20} />
+                  <Icon size={18} />
                   <span>{link.label}</span>
                 </Link>
               );
@@ -155,8 +173,8 @@ export const ProtectedLayout = ({ children, allowedRoles }) => {
         </div>
 
         {/* User profile footer */}
-        <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+        <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '1rem', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
             {user.logoUrl ? (
               <img 
                 src={user.logoUrl} 
@@ -214,13 +232,13 @@ export const ProtectedLayout = ({ children, allowedRoles }) => {
           <button 
             onClick={logout} 
             className="btn btn-secondary" 
-            style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}
+            style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '0.75rem', marginBottom: '0.5rem', padding: '0.5rem 1rem' }}
           >
             <LogOut size={16} />
             <span>Logout</span>
           </button>
 
-          <div style={{ textAlign: 'center', fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 500, padding: '0.25rem 0' }}>
+          <div style={{ textAlign: 'center', fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 500, padding: '0.15rem 0' }}>
             © SoftEdgex Technologies
           </div>
         </div>
@@ -231,10 +249,10 @@ export const ProtectedLayout = ({ children, allowedRoles }) => {
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, y: 15 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.25 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.12, ease: 'easeOut' }}
           >
             {children}
           </motion.div>
