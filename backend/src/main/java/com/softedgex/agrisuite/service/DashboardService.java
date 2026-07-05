@@ -98,6 +98,10 @@ public class DashboardService {
         long totalProducts = productRepository.countByDealerId(dealerId);
         long totalStaff = staffRepository.countByDealerId(dealerId);
 
+        stats.put("totalFarmers", totalFarmers);
+        stats.put("totalProducts", totalProducts);
+        stats.put("totalStaff", totalStaff);
+
         // Low stock products
         List<Product> lowStock = productRepository.findLowStockProducts(dealerId);
         stats.put("lowStockCount", lowStock.size());
