@@ -40,14 +40,37 @@ public class PaymentService {
     @org.springframework.beans.factory.annotation.Value("${razorpay.key-secret}")
     private String keySecret;
 
-    public Map<String, Object> getRazorpayConfigDiagnostics() {
+    @org.springframework.beans.factory.annotation.Value("${twilio.account-sid}")
+    private String twilioSid;
+
+    @org.springframework.beans.factory.annotation.Value("${twilio.auth-token}")
+    private String twilioToken;
+
+    @org.springframework.beans.factory.annotation.Value("${twilio.sms-number}")
+    private String twilioSms;
+
+    @org.springframework.beans.factory.annotation.Value("${twilio.whatsapp-number}")
+    private String twilioWhatsapp;
+
+    public Map<String, Object> getSystemConfigDiagnostics() {
         Map<String, Object> check = new HashMap<>();
-        check.put("keyIdValue", keyId != null ? (keyId.length() > 8 ? keyId.substring(0, 8) + "..." : keyId) : "null");
-        check.put("keySecretLength", keySecret != null ? keySecret.length() : 0);
-        check.put("isMockDetected", keyId == null || keySecret == null || 
+        // Razorpay
+        check.put("razorpayKeyId", keyId != null ? (keyId.length() > 8 ? keyId.substring(0, 8) + "..." : keyId) : "null");
+        check.put("razorpayKeySecretLength", keySecret != null ? keySecret.length() : 0);
+        check.put("razorpayMock", keyId == null || keySecret == null || 
                                    "mock_key_id".equalsIgnoreCase(keyId) || 
                                    "mock_key_secret".equalsIgnoreCase(keySecret) || 
                                    keyId.isBlank() || keySecret.isBlank());
+
+        // Twilio
+        check.put("twilioSid", twilioSid != null ? (twilioSid.length() > 8 ? twilioSid.substring(0, 8) + "..." : twilioSid) : "null");
+        check.put("twilioTokenLength", twilioToken != null ? twilioToken.length() : 0);
+        check.put("twilioSmsNumber", twilioSms);
+        check.put("twilioWhatsappNumber", twilioWhatsapp);
+        check.put("twilioMock", twilioSid == null || twilioToken == null || 
+                                 "mock_account_sid".equalsIgnoreCase(twilioSid) || 
+                                 "mock_auth_token".equalsIgnoreCase(twilioToken) || 
+                                 twilioSid.isBlank() || twilioToken.isBlank());
         return check;
     }
 

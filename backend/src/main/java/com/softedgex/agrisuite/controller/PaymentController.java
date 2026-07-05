@@ -19,7 +19,7 @@ public class PaymentController {
 
     @GetMapping("/config-check")
     public ResponseEntity<Map<String, Object>> configCheck() {
-        return ResponseEntity.ok(paymentService.getRazorpayConfigDiagnostics());
+        return ResponseEntity.ok(paymentService.getSystemConfigDiagnostics());
     }
 
     @GetMapping("/history")
