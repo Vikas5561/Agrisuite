@@ -23,6 +23,7 @@ public class RazorpayGatewayServiceImpl implements PaymentGatewayService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     private boolean isMock() {
+        System.out.println("Razorpay check - keyId: '" + keyId + "', keySecret length: " + (keySecret != null ? keySecret.length() : 0));
         return keyId == null || keySecret == null || 
                "mock_key_id".equalsIgnoreCase(keyId) || 
                "mock_key_secret".equalsIgnoreCase(keySecret) || 
