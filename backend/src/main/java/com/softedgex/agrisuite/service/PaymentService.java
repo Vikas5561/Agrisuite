@@ -34,6 +34,23 @@ public class PaymentService {
     @Autowired
     private PaymentGatewayService paymentGateway;
 
+    @org.springframework.beans.factory.annotation.Value("${razorpay.key-id}")
+    private String keyId;
+
+    @org.springframework.beans.factory.annotation.Value("${razorpay.key-secret}")
+    private String keySecret;
+
+    public Map<String, Object> getRazorpayConfigDiagnostics() {
+        Map<String, Object> check = new HashMap<>();
+        check.put("keyIdValue", keyId != null ? (keyId.length() > 8 ? keyId.substring(0, 8) + "..." : keyId) : "null");
+        check.put("keySecretLength", keySecret != null ? keySecret.length() : 0);
+        check.put("isMockDetected", keyId == null || keySecret == null || 
+                                   "mock_key_id".equalsIgnoreCase(keyId) || 
+                                   "mock_key_secret".equalsIgnoreCase(keySecret) || 
+                                   keyId.isBlank() || keySecret.isBlank());
+        return check;
+    }
+
     public List<Payment> getPaymentHistory() {
         if (SecurityUtils.isSuperAdmin()) {
             return paymentRepository.findAll();

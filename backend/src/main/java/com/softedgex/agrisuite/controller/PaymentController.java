@@ -17,6 +17,11 @@ public class PaymentController {
     @Autowired
     private PaymentService paymentService;
 
+    @GetMapping("/config-check")
+    public ResponseEntity<Map<String, Object>> configCheck() {
+        return ResponseEntity.ok(paymentService.getRazorpayConfigDiagnostics());
+    }
+
     @GetMapping("/history")
     public ResponseEntity<List<Payment>> getPaymentHistory() {
         return ResponseEntity.ok(paymentService.getPaymentHistory());
