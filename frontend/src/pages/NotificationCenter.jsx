@@ -169,21 +169,26 @@ export const NotificationCenter = () => {
       return;
     }
 
-    if (commMode === 'PERSONAL_WHATSAPP') {
+    if (commMode === 'PERSONAL_WHATSAPP' || commMode === 'PERSONAL_SMS') {
       const selectedFarmersList = farmers.filter(f => selectedFarmerIds.includes(f.id));
       
       if (selectedFarmersList.length === 1) {
         const f = selectedFarmersList[0];
-        const cleanPhone = f.mobile.replace(/[^0-9]/g, '');
-        const formattedPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
         const resolvedText = resolveUIPlaceholders(messageText, [f.id]);
-        window.open(`https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(resolvedText)}`, '_blank');
+        
+        if (commMode === 'PERSONAL_WHATSAPP') {
+          const cleanPhone = f.mobile.replace(/[^0-9]/g, '');
+          const formattedPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+          window.open(`https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(resolvedText)}`, '_blank');
+        } else {
+          window.open(`sms:${f.mobile}?body=${encodeURIComponent(resolvedText)}`, '_blank');
+        }
         
         // Log to database as sent via personal channel
         try {
           const payload = {
             recipientName: `${f.firstName} ${f.lastName}`,
-            channel: 'WHATSAPP',
+            channel: commMode === 'PERSONAL_WHATSAPP' ? 'WHATSAPP' : 'SMS',
             message: resolvedText,
             status: 'SENT'
           };
@@ -422,6 +427,7 @@ export const NotificationCenter = () => {
                 >
                   <option value="UNIVERSAL">Broadcast via Universal Number (Auto)</option>
                   <option value="PERSONAL_WHATSAPP">Personal WhatsApp (Manual)</option>
+                  <option value="PERSONAL_SMS">Personal SMS / Text Message (Manual)</option>
                 </select>
               </div>
 
@@ -431,7 +437,13 @@ export const NotificationCenter = () => {
                 </div>
                 <button type="submit" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Send size={16} />
-                  <span>{commMode === 'PERSONAL_WHATSAPP' ? 'Start Personal WhatsApp' : t('dispatchBroadcast', language)}</span>
+                  <span>
+                    {commMode === 'PERSONAL_WHATSAPP' 
+                      ? 'Start Personal WhatsApp' 
+                      : commMode === 'PERSONAL_SMS' 
+                      ? 'Start Personal SMS' 
+                      : t('dispatchBroadcast', language)}
+                  </span>
                 </button>
               </div>
             </div>
@@ -642,10 +654,12 @@ export const NotificationCenter = () => {
             borderRadius: '16px'
           }}>
             <h3 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '1rem', color: '#ffffff' }}>
-              Personal WhatsApp Dispatcher
+              {commMode === 'PERSONAL_SMS' ? 'Personal SMS Dispatcher' : 'Personal WhatsApp Dispatcher'}
             </h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-              To bypass browser popup blockers, please click the send button for each farmer below. WhatsApp Web will open with the pre-filled message.
+              {commMode === 'PERSONAL_SMS' 
+                ? 'To bypass browser popup blockers, please click the send button for each farmer below to open your device SMS app with the pre-filled text.' 
+                : 'To bypass browser popup blockers, please click the send button for each farmer below. WhatsApp Web will open with the pre-filled message.'}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '300px', overflowY: 'auto', marginBottom: '2rem' }}>
@@ -667,7 +681,9 @@ export const NotificationCenter = () => {
                     </div>
 
                     <a
-                      href={`https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(resolvedText)}`}
+                      href={commMode === 'PERSONAL_SMS' 
+                        ? `sms:${f.mobile}?body=${encodeURIComponent(resolvedText)}`
+                        : `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(resolvedText)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => setQueueSentMap(prev => ({ ...prev, [f.id]: true }))}
@@ -678,14 +694,14 @@ export const NotificationCenter = () => {
                         display: 'inline-flex',
                         gap: '0.25rem',
                         alignItems: 'center',
-                        borderColor: isSent ? 'var(--text-muted)' : '#22c55e',
-                        background: isSent ? 'rgba(255,255,255,0.01)' : 'rgba(34, 197, 94, 0.05)',
+                        borderColor: isSent ? 'var(--text-muted)' : commMode === 'PERSONAL_SMS' ? '#fbbf24' : '#22c55e',
+                        background: isSent ? 'rgba(255,255,255,0.01)' : commMode === 'PERSONAL_SMS' ? 'rgba(251, 191, 36, 0.05)' : 'rgba(34, 197, 94, 0.05)',
                         color: isSent ? 'var(--text-muted)' : '#ffffff',
                         border: '1px solid'
                       }}
                     >
-                      <MessageSquare size={12} style={{ color: isSent ? 'var(--text-muted)' : '#22c55e' }} />
-                      <span>{isSent ? 'Sent (Reopen)' : 'Send WhatsApp'}</span>
+                      <MessageSquare size={12} style={{ color: isSent ? 'var(--text-muted)' : commMode === 'PERSONAL_SMS' ? '#fbbf24' : '#22c55e' }} />
+                      <span>{isSent ? 'Sent (Reopen)' : commMode === 'PERSONAL_SMS' ? 'Send SMS' : 'Send WhatsApp'}</span>
                     </a>
                   </div>
                 );

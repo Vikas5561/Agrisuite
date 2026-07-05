@@ -25,6 +25,21 @@ export const StaffManagement = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState(null);
 
+  const [selectedStaff, setSelectedStaff] = useState(null);
+  const [staffVisits, setStaffVisits] = useState([]);
+  const [staffActiveTab, setStaffActiveTab] = useState('profile');
+
+  const handleSelectStaff = async (s) => {
+    setSelectedStaff(s);
+    setStaffActiveTab('profile');
+    try {
+      const res = await api.get(`/api/v1/visits/staff/${s.id}`);
+      setStaffVisits(res.data);
+    } catch (err) {
+      console.warn("Could not fetch staff performance visits", err);
+    }
+  };
+
   const handleReactivateStaff = async (id) => {
     try {
       await api.put(`/api/v1/staff/${id}/activate`);
@@ -128,8 +143,23 @@ export const StaffManagement = () => {
     return <div style={{ padding: '2rem', color: 'var(--text-secondary)' }}>Loading staff directory...</div>;
   }
 
+  const tabHeaderStyle = (active) => ({
+    padding: '0.5rem 1rem',
+    border: 'none',
+    background: 'transparent',
+    color: active ? 'var(--accent-primary)' : 'var(--text-secondary)',
+    borderBottom: active ? '2px solid var(--accent-primary)' : '2px solid transparent',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+    fontSize: '0.85rem',
+    whiteSpace: 'nowrap',
+    transition: 'var(--transition-smooth)'
+  });
+
   return (
-    <div>
+    <>
+      <div style={{ display: 'grid', gridTemplateColumns: selectedStaff ? '1.2fr 1fr' : '1fr', gap: '2rem' }}>
+        <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
           <h1 style={{ fontSize: '2rem', fontWeight: 800 }}>{t('staffDirectoryTitle', language)}</h1>
@@ -174,8 +204,9 @@ export const StaffManagement = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               key={s.id}
-              className="glass-panel"
-              style={{ padding: '1.5rem', display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', gap: '1.5rem', alignItems: 'center' }}
+              onClick={() => handleSelectStaff(s)}
+              className={`glass-panel ${selectedStaff?.id === s.id ? 'active-border' : ''}`}
+              style={{ padding: '1.5rem', display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', gap: '1.5rem', alignItems: 'center', cursor: 'pointer' }}
             >
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -243,9 +274,114 @@ export const StaffManagement = () => {
           </div>
         )}
       </div>
+      </div>
 
-      {/* Add Staff Modal */}
-      {showAddModal && (
+      {/* Right side: Detailed View */}
+      {selectedStaff && (
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="glass-panel"
+          style={{ padding: '2rem', height: 'fit-content' }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '1rem' }}>
+            <div>
+              <span style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: 'bold' }}>{selectedStaff.employeeCode}</span>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{selectedStaff.firstName} {selectedStaff.lastName}</h2>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '0.25rem' }}>
+                <span className={`status-badge badge-${selectedStaff.status?.toLowerCase()}`} style={{ fontSize: '0.65rem' }}>{selectedStaff.status}</span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Dept: {selectedStaff.department}</span>
+              </div>
+            </div>
+            <button onClick={() => setSelectedStaff(null)} className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>Close</button>
+          </div>
+
+          {/* Details tab switcher */}
+          <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border-glass)', marginBottom: '1.5rem' }}>
+            <button onClick={() => setStaffActiveTab('profile')} style={tabHeaderStyle(staffActiveTab === 'profile')}>Profile Details</button>
+            <button onClick={() => setStaffActiveTab('performance')} style={tabHeaderStyle(staffActiveTab === 'performance')}>Performance & Visits</button>
+          </div>
+
+          {/* Tab content */}
+          {staffActiveTab === 'profile' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', fontSize: '0.9rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <div style={{ color: 'var(--text-secondary)' }}>Designation / Title:</div>
+                  <div style={{ fontWeight: 'bold' }}>{selectedStaff.designation || 'N/A'}</div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--text-secondary)' }}>Department:</div>
+                  <div style={{ fontWeight: 'bold' }}>{selectedStaff.department || 'N/A'}</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <div style={{ color: 'var(--text-secondary)' }}>Email Address:</div>
+                  <div style={{ fontWeight: 'bold' }}>{selectedStaff.email}</div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--text-secondary)' }}>Mobile Number:</div>
+                  <div style={{ fontWeight: 'bold' }}>{selectedStaff.mobile}</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <div style={{ color: 'var(--text-secondary)' }}>Date Joined:</div>
+                  <div style={{ fontWeight: 'bold' }}>{selectedStaff.joiningDate ? new Date(selectedStaff.joiningDate).toLocaleDateString() : 'N/A'}</div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--text-secondary)' }}>Shift ID:</div>
+                  <div style={{ fontWeight: 'bold' }}>{selectedStaff.shiftId || 'Default General'}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {staffActiveTab === 'performance' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Performance Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="glass-panel" style={{ padding: '1rem', textAlign: 'center', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-glass)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Field Visits Completed</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--accent-primary)' }}>{staffVisits.length}</div>
+                </div>
+                <div className="glass-panel" style={{ padding: '1rem', textAlign: 'center', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-glass)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Performance Rating</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fbbf24' }}>4.8 / 5</div>
+                </div>
+              </div>
+
+              {/* Visits list */}
+              <div>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '0.75rem', color: 'var(--text-secondary)' }}>Field Visits Logged</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '240px', overflowY: 'auto' }}>
+                  {staffVisits.length > 0 ? (
+                    staffVisits.map((v) => (
+                      <div key={v.id} style={{ padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-glass)', borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.25rem' }}>
+                          <span style={{ fontWeight: 'bold', color: 'var(--accent-secondary)' }}>{v.farmerName}</span>
+                          <span style={{ color: 'var(--text-muted)' }}>{new Date(v.visitDate).toLocaleDateString()}</span>
+                        </div>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0 0 0.25rem 0' }}>{v.observations}</p>
+                        <span style={{ fontSize: '0.65rem', background: 'rgba(16,185,129,0.1)', color: 'var(--success)', padding: '0.1rem 0.35rem', borderRadius: '4px', textTransform: 'uppercase', fontWeight: 'bold' }}>{v.status}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '1rem' }}>No field visits recorded by this employee.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
+    </div>
+
+    {/* Add Staff Modal */}
+    {showAddModal && (
         <div style={{
           position: 'fixed',
           inset: 0,
@@ -356,6 +492,6 @@ export const StaffManagement = () => {
           </motion.div>
         </div>
       )}
-    </div>
+    </>
   );
 };

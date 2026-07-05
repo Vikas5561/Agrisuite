@@ -25,4 +25,9 @@ public class SalesInvoiceController {
     public ResponseEntity<SalesInvoice> createSalesInvoice(@RequestBody SalesInvoiceRequest request) {
         return ResponseEntity.ok(salesInvoiceService.createSalesInvoice(request));
     }
+
+    @GetMapping("/farmer/{farmerId}")
+    public ResponseEntity<List<SalesInvoice>> getSalesByFarmer(@PathVariable Long farmerId) {
+        return ResponseEntity.ok(salesInvoiceService.getSalesByFarmer(farmerId));
+    }
 }

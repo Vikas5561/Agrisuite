@@ -161,4 +161,17 @@ public class SalesInvoiceService {
 
         return savedInvoice;
     }
+
+    public List<SalesInvoice> getSalesByFarmer(Long farmerId) {
+        Long dealerId = SecurityUtils.getCurrentDealerId();
+        if (dealerId == null) {
+            throw new AccessDeniedException("No dealer context found");
+        }
+        Farmer farmer = farmerRepository.findById(farmerId)
+                .orElseThrow(() -> new IllegalArgumentException("Farmer not found"));
+        if (!farmer.getDealerId().equals(dealerId)) {
+            throw new AccessDeniedException("Access denied to farmer details");
+        }
+        return salesInvoiceRepository.findByFarmerIdOrderByCreatedAtDesc(farmerId);
+    }
 }

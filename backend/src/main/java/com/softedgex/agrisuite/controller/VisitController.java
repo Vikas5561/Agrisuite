@@ -48,4 +48,14 @@ public class VisitController {
         body.put("message", "Visit report deleted successfully");
         return ResponseEntity.ok(body);
     }
+
+    @GetMapping("/farmer/{farmerId}")
+    public ResponseEntity<List<Visit>> getVisitsByFarmer(@PathVariable Long farmerId) {
+        return ResponseEntity.ok(visitService.getVisitsByFarmer(farmerId));
+    }
+
+    @GetMapping("/staff/{staffId}")
+    public ResponseEntity<List<Visit>> getVisitsByStaff(@PathVariable Long staffId) {
+        return ResponseEntity.ok(visitService.getVisitsByStaff(staffId));
+    }
 }

@@ -32,6 +32,8 @@ export const FarmerManagement = () => {
   const [notes, setNotes] = useState([]);
   const [newNote, setNewNote] = useState('');
   const [timeline, setTimeline] = useState([]);
+  const [purchaseHistory, setPurchaseHistory] = useState([]);
+  const [visitHistory, setVisitHistory] = useState([]);
 
   // Sales Modal states
   const [showSellModal, setShowSellModal] = useState(false);
@@ -208,6 +210,8 @@ export const FarmerManagement = () => {
       setNotes(notesRes.data);
       const timelineRes = await api.get(`/api/v1/farmers/${selectedFarmer.id}/timeline`);
       setTimeline(timelineRes.data);
+      const purchaseRes = await api.get(`/api/v1/sales/farmer/${selectedFarmer.id}`);
+      setPurchaseHistory(purchaseRes.data);
     } catch (err) {
       alert(err.response?.data?.message || 'Error processing sales order.');
     }
@@ -221,6 +225,11 @@ export const FarmerManagement = () => {
       setNotes(notesRes.data);
       const timelineRes = await api.get(`/api/v1/farmers/${farmer.id}/timeline`);
       setTimeline(timelineRes.data);
+      
+      const purchaseRes = await api.get(`/api/v1/sales/farmer/${farmer.id}`);
+      setPurchaseHistory(purchaseRes.data);
+      const visitRes = await api.get(`/api/v1/visits/farmer/${farmer.id}`);
+      setVisitHistory(visitRes.data);
     } catch (err) {
       console.warn("Could not fetch farmer auxiliary details", err);
     }
@@ -376,8 +385,10 @@ export const FarmerManagement = () => {
           </div>
 
           {/* Details tab switcher */}
-          <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border-glass)', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', borderBottom: '1px solid var(--border-glass)', marginBottom: '1.5rem', overflowX: 'auto', paddingBottom: '0.25rem' }}>
             <button onClick={() => setActiveTab('overview')} style={tabHeaderStyle(activeTab === 'overview')}>{t('overview', language)}</button>
+            <button onClick={() => setActiveTab('purchaseHistory')} style={tabHeaderStyle(activeTab === 'purchaseHistory')}>Purchase History</button>
+            <button onClick={() => setActiveTab('visitHistory')} style={tabHeaderStyle(activeTab === 'visitHistory')}>Visit History</button>
             <button onClick={() => setActiveTab('notes')} style={tabHeaderStyle(activeTab === 'notes')}>{t('notesMemo', language)}</button>
             <button onClick={() => setActiveTab('timeline')} style={tabHeaderStyle(activeTab === 'timeline')}>{t('timelineActivity', language)}</button>
           </div>
@@ -415,6 +426,70 @@ export const FarmerManagement = () => {
                   {selectedFarmer.village}, {t('taluka', language)} {selectedFarmer.taluka}, {t('district', language)} {selectedFarmer.district}, {selectedFarmer.state} - {selectedFarmer.pinCode}
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'purchaseHistory' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '360px', overflowY: 'auto' }}>
+              {purchaseHistory.length > 0 ? (
+                purchaseHistory.map((invoice) => {
+                  let items = [];
+                  try {
+                    items = JSON.parse(invoice.itemsJson || '[]');
+                  } catch (e) {
+                    console.warn(e);
+                  }
+                  return (
+                    <div key={invoice.id} style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-glass)', borderRadius: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                        <span style={{ fontWeight: 'bold', color: 'var(--accent-primary)', fontSize: '0.85rem' }}>{invoice.invoiceNumber}</span>
+                        <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                          {new Date(invoice.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                        {items.map((it, idx) => (
+                          <div key={idx}>{it.productName} (x{it.quantity})</div>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderTop: '1px dashed var(--border-glass)', paddingTop: '0.5rem' }}>
+                        <span>Method: <strong>{invoice.paymentMethod}</strong></span>
+                        <span style={{ color: '#ffffff', fontWeight: 'bold' }}>Total: ₹{invoice.totalAmount?.toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '2rem' }}>No purchase history found.</div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'visitHistory' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '360px', overflowY: 'auto' }}>
+              {visitHistory.length > 0 ? (
+                visitHistory.map((visit) => (
+                  <div key={visit.id} style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-glass)', borderRadius: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <span style={{ fontWeight: 'bold', color: 'var(--accent-secondary)', fontSize: '0.85rem' }}>{visit.visitType}</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        {new Date(visit.visitDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0' }}>{visit.observations}</p>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Agent: {visit.staffName}</span>
+                      <span style={{ 
+                        color: visit.status === 'COMPLETED' ? 'var(--success)' : 'var(--accent-secondary)',
+                        fontWeight: 'bold',
+                        textTransform: 'uppercase'
+                      }}>{visit.status}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '2rem' }}>No visit history found.</div>
+              )}
             </div>
           )}
 

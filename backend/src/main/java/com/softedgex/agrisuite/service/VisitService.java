@@ -208,4 +208,20 @@ public class VisitService {
         Visit visit = getVisitById(id);
         visitRepository.delete(visit);
     }
+
+    public List<Visit> getVisitsByFarmer(Long farmerId) {
+        Long dealerId = SecurityUtils.getCurrentDealerId();
+        if (dealerId == null) {
+            throw new AccessDeniedException("No dealer context found");
+        }
+        return visitRepository.findByFarmerIdOrderByVisitDateDesc(farmerId);
+    }
+
+    public List<Visit> getVisitsByStaff(Long staffId) {
+        Long dealerId = SecurityUtils.getCurrentDealerId();
+        if (dealerId == null) {
+            throw new AccessDeniedException("No dealer context found");
+        }
+        return visitRepository.findByStaffIdOrderByVisitDateDesc(staffId);
+    }
 }
