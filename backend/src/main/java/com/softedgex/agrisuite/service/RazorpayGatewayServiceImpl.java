@@ -51,7 +51,7 @@ public class RazorpayGatewayServiceImpl implements PaymentGatewayService {
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
             ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
             
-            if (response.getStatusCode() == HttpStatus.CREATED && response.getBody() != null) {
+            if ((response.getStatusCode() == HttpStatus.OK || response.getStatusCode() == HttpStatus.CREATED) && response.getBody() != null) {
                 Map<String, Object> order = new HashMap<>(response.getBody());
                 order.put("key", keyId); // Inject key for frontend initialization
                 return order;
