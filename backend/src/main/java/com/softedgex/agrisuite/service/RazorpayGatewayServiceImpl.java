@@ -56,12 +56,11 @@ public class RazorpayGatewayServiceImpl implements PaymentGatewayService {
                 order.put("key", keyId); // Inject key for frontend initialization
                 return order;
             }
+            throw new IllegalArgumentException("Razorpay API returned status: " + response.getStatusCode());
         } catch (Exception e) {
             System.err.println("Razorpay Order Creation Failed: " + e.getMessage());
+            throw new IllegalArgumentException("Razorpay API connection failed: " + e.getMessage());
         }
-
-        // Fallback to simulated order if API call fails
-        return mockCreateOrder(amount, receiptId);
     }
 
     private Map<String, Object> mockCreateOrder(Double amount, String receiptId) {
