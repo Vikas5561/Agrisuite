@@ -41,6 +41,21 @@ export const PlansManagement = () => {
     fetchPlans();
   }, []);
 
+  const handleCreateClick = () => {
+    setSelectedPlan(null);
+    setName('');
+    setDurationMonths(1);
+    setPrice(0.0);
+    setMaxStaff(2);
+    setMaxStorage(1000);
+    setMaxDocuments(100);
+    setStatus('ACTIVE');
+    setOfferDiscount(0.0);
+    setOfferCode('');
+    setOfferDescription('');
+    setShowEditModal(true);
+  };
+
   const handleEditClick = (p) => {
     setSelectedPlan(p);
     setName(p.name);
@@ -72,8 +87,13 @@ export const PlansManagement = () => {
         offerDescription: offerDescription || null
       };
 
-      await api.put(`/api/v1/subscriptions/plans/${selectedPlan.id}`, payload);
-      alert('Subscription plan updated and saved successfully! Offers applied will be visible to all dealers.');
+      if (selectedPlan) {
+        await api.put(`/api/v1/subscriptions/plans/${selectedPlan.id}`, payload);
+        alert('Subscription plan updated and saved successfully! Offers applied will be visible to all dealers.');
+      } else {
+        await api.post('/api/v1/subscriptions/plans', payload);
+        alert('Subscription plan created successfully!');
+      }
       setShowEditModal(false);
       fetchPlans();
     } catch (err) {
@@ -88,10 +108,16 @@ export const PlansManagement = () => {
           <h1 style={{ fontSize: '2rem', fontWeight: 800 }}>Manage Platform Subscription Plans</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Configure existing packages, set resource limits, apply special offer discounts, and toggle plan status</p>
         </div>
-        <button onClick={fetchPlans} className="btn btn-secondary">
-          <RotateCw size={16} />
-          <span>Refresh</span>
-        </button>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button onClick={handleCreateClick} className="btn btn-primary" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <Plus size={16} />
+            <span>Create New Plan</span>
+          </button>
+          <button onClick={fetchPlans} className="btn btn-secondary" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <RotateCw size={16} />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -204,7 +230,9 @@ export const PlansManagement = () => {
             className="glass-panel"
             style={{ width: '100%', maxWidth: '600px', padding: '2.5rem', maxHeight: '90vh', overflowY: 'auto' }}
           >
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>Edit Subscription Package: {name}</h2>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>
+              {selectedPlan ? `Edit Subscription Package: ${selectedPlan.name}` : 'Create New Subscription Package'}
+            </h2>
             <form onSubmit={handleSavePlan}>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -269,7 +297,9 @@ export const PlansManagement = () => {
 
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '2rem' }}>
                 <button type="button" onClick={() => setShowEditModal(false)} className="btn btn-secondary">Cancel</button>
-                <button type="submit" className="btn btn-primary">Update Plan Details</button>
+                <button type="submit" className="btn btn-primary">
+                  {selectedPlan ? 'Update Plan Details' : 'Create New Plan'}
+                </button>
               </div>
 
             </form>
