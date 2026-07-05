@@ -23,4 +23,6 @@ public class AuthResponse {
     private String displayName;
     private List<String> permissions;
     private String status;
+    private String department;
+    private String designation;
 }

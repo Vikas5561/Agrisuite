@@ -12,7 +12,8 @@ import {
   Plus, 
   Key, 
   Ban, 
-  Check 
+  Check,
+  Trash2
 } from 'lucide-react';
 
 export const StaffManagement = () => {
@@ -23,6 +24,25 @@ export const StaffManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState(null);
+
+  const handleReactivateStaff = async (id) => {
+    try {
+      await api.put(`/api/v1/staff/${id}/activate`);
+      fetchStaff();
+    } catch (err) {
+      alert('Error reactivating staff account.');
+    }
+  };
+
+  const handleDeleteStaff = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this staff member? This will permanently delete their record and login account.")) return;
+    try {
+      await api.delete(`/api/v1/staff/${id}`);
+      fetchStaff();
+    } catch (err) {
+      alert('Error deleting staff member.');
+    }
+  };
 
   // Form fields
   const [firstName, setFirstName] = useState('');
@@ -185,7 +205,7 @@ export const StaffManagement = () => {
                   <Key size={14} />
                   <span>Reset Pwd</span>
                 </button>
-                {s.status === 'ACTIVE' && (
+                {s.status === 'ACTIVE' ? (
                   <button 
                     onClick={() => handleSuspendStaff(s.id)}
                     className="btn btn-danger"
@@ -194,6 +214,25 @@ export const StaffManagement = () => {
                     <Ban size={14} />
                     <span>Suspend</span>
                   </button>
+                ) : (
+                  <>
+                    <button 
+                      onClick={() => handleReactivateStaff(s.id)}
+                      className="btn btn-primary"
+                      style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', background: '#059669', borderColor: '#059669' }}
+                    >
+                      <Check size={14} />
+                      <span>Reactivate</span>
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteStaff(s.id)}
+                      className="btn btn-danger"
+                      style={{ padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      title="Delete Staff"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </>
                 )}
               </div>
             </motion.div>

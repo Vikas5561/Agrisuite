@@ -70,13 +70,36 @@ export const ProtectedLayout = ({ children, allowedRoles }) => {
           { to: '/dealer-admin/subscription', label: t('mySubscription', language), icon: Layers },
           { to: '/dealer-admin/billing', label: t('billingReceipts', language), icon: CreditCard },
         ];
-      case 'STAFF':
-        return [
-          { to: '/staff', label: t('myDashboard', language), icon: LayoutDashboard },
-          { to: '/staff/farmers', label: t('farmersRegistry', language), icon: Users },
-          { to: '/staff/products', label: t('viewProducts', language), icon: Package },
-          { to: '/staff/visits', label: t('fieldVisitTracker', language), icon: Clipboard },
+      case 'STAFF': {
+        const dept = (user.department || '').toUpperCase();
+        const desig = (user.designation || '').toUpperCase();
+        
+        const isInventory = dept === 'INVENTORY' || desig.includes('INVENTORY');
+        const isSalesOrCashier = dept === 'SALES' || dept === 'ACCOUNTS' || desig.includes('CASHIER') || desig.includes('SALES') || desig.includes('ACCOUNTANT');
+        const isField = dept === 'FIELD' || desig.includes('FIELD') || desig.includes('AGRONOMIST');
+
+        const staffLinks = [
+          { to: '/staff', label: t('myDashboard', language), icon: LayoutDashboard }
         ];
+
+        if (isInventory) {
+          staffLinks.push({ to: '/staff/products', label: t('productsInventory', language), icon: Package });
+          staffLinks.push({ to: '/staff/suppliers', label: t('suppliersPurchases', language), icon: ShoppingBag });
+        } else if (isSalesOrCashier) {
+          staffLinks.push({ to: '/staff/farmers', label: t('farmersRegistry', language), icon: Users });
+          staffLinks.push({ to: '/staff/credit-book', label: t('farmerCreditBook', language), icon: BookOpen });
+        } else if (isField) {
+          staffLinks.push({ to: '/staff/farmers', label: t('farmersRegistry', language), icon: Users });
+          staffLinks.push({ to: '/staff/visits', label: t('fieldVisitTracker', language), icon: Clipboard });
+        } else {
+          // Default fallback for general staff
+          staffLinks.push({ to: '/staff/farmers', label: t('farmersRegistry', language), icon: Users });
+          staffLinks.push({ to: '/staff/products', label: t('viewProducts', language), icon: Package });
+          staffLinks.push({ to: '/staff/visits', label: t('fieldVisitTracker', language), icon: Clipboard });
+        }
+
+        return staffLinks;
+      }
       default:
         return [];
     }

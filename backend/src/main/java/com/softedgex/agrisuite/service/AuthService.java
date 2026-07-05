@@ -128,7 +128,18 @@ public class AuthService {
         // Generate tokens
         String roleName = user.getRole() != null ? user.getRole().getRoleName() : "STAFF";
         String sessionId = UUID.randomUUID().toString();
-        String token = jwtUtils.generateAccessToken(user.getUsername(), user.getDealerId(), roleName, permissionsStr, sessionId);
+
+        String department = null;
+        String designation = null;
+        if ("STAFF".equalsIgnoreCase(roleName)) {
+            Optional<Staff> staffOpt = staffRepository.findByUserId(user.getId());
+            if (staffOpt.isPresent()) {
+                department = staffOpt.get().getDepartment();
+                designation = staffOpt.get().getDesignation();
+            }
+        }
+
+        String token = jwtUtils.generateAccessToken(user.getUsername(), user.getDealerId(), roleName, permissionsStr, sessionId, user.getId(), department, designation);
         String refreshToken = jwtUtils.generateRefreshToken(user.getUsername());
 
         // Track user session
@@ -170,6 +181,8 @@ public class AuthService {
                 .displayName(resolveDisplayName(user, roleName))
                 .permissions(permissions)
                 .status("SUCCESS")
+                .department(department)
+                .designation(designation)
                 .build();
     }
 
@@ -224,7 +237,17 @@ public class AuthService {
         }
         String permissionsStr = String.join(",", permissions);
 
-        String newAccessToken = jwtUtils.generateAccessToken(user.getUsername(), user.getDealerId(), roleName, permissionsStr, session.getSessionId());
+        String department = null;
+        String designation = null;
+        if ("STAFF".equalsIgnoreCase(roleName)) {
+            Optional<Staff> staffOpt = staffRepository.findByUserId(user.getId());
+            if (staffOpt.isPresent()) {
+                department = staffOpt.get().getDepartment();
+                designation = staffOpt.get().getDesignation();
+            }
+        }
+
+        String newAccessToken = jwtUtils.generateAccessToken(user.getUsername(), user.getDealerId(), roleName, permissionsStr, session.getSessionId(), user.getId(), department, designation);
         String newRefreshToken = jwtUtils.generateRefreshToken(user.getUsername());
 
         // Rotate Refresh Token
@@ -242,6 +265,8 @@ public class AuthService {
             }
         }
 
+
+
         return AuthResponse.builder()
                 .token(newAccessToken)
                 .refreshToken(newRefreshToken)
@@ -255,6 +280,8 @@ public class AuthService {
                 .displayName(resolveDisplayName(user, roleName))
                 .permissions(permissions)
                 .status("SUCCESS")
+                .department(department)
+                .designation(designation)
                 .build();
     }
 

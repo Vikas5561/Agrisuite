@@ -71,17 +71,94 @@ public class SecurityInterceptor implements HandlerInterceptor {
         List<String> permissions = permissionsStr != null && !permissionsStr.isBlank()
                 ? Arrays.asList(permissionsStr.split(","))
                 : List.of();
+        Long userId = claims.get("userId", Long.class);
+        String department = claims.get("department", String.class);
+        String designation = claims.get("designation", String.class);
 
         UserContext.UserSessionInfo sessionInfo = UserContext.UserSessionInfo.builder()
-                .userId(null) // Can look up if needed, but not required for simple request context
+                .userId(userId)
                 .username(username)
                 .email(null)
                 .dealerId(dealerId)
                 .role(role)
                 .permissions(permissions)
+                .department(department)
+                .designation(designation)
                 .build();
 
         UserContext.set(sessionInfo);
+
+        // Role & Department / Designation checks
+        if ("STAFF".equalsIgnoreCase(role)) {
+            String dept = (department != null ? department : "").toUpperCase();
+            String desig = (designation != null ? designation : "").toUpperCase();
+            
+            boolean isInventoryManager = dept.contains("INVENTORY") || desig.contains("INVENTORY");
+            boolean isSalesOrCashier = dept.contains("SALES") || dept.contains("ACCOUNTS") || desig.contains("CASHIER") || desig.contains("SALES") || desig.contains("ACCOUNTANT");
+            boolean isField = dept.contains("FIELD") || desig.contains("FIELD") || desig.contains("AGRONOMIST");
+
+            // 1. Administration modules are blocked for all staff
+            if (path.startsWith("/api/v1/staff") || path.startsWith("/api/v1/dealers") || path.startsWith("/api/v1/admin") || path.startsWith("/api/v1/subscriptions")) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"error\": \"Forbidden\", \"message\": \"Access denied. Administration access is restricted to dealers and admins only.\"}");
+                return false;
+            }
+
+            // 2. Module specific checks
+            if (isInventoryManager) {
+                // Inventory Manager should ONLY access: Products, Suppliers, Purchase Entries
+                // Block access to: Visits, Farmers, Credit Book, Sales
+                if (path.startsWith("/api/v1/visits") || path.startsWith("/api/v1/farmers") || path.startsWith("/api/v1/sales") || path.startsWith("/api/v1/credit")) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\": \"Forbidden\", \"message\": \"Access denied. Inventory Managers only have access to products, inventory, and supplier purchases.\"}");
+                    return false;
+                }
+            } else if (isSalesOrCashier) {
+                // Cashier/Sales should NOT access: Products, Suppliers, Purchase Entries, Visits
+                if (path.startsWith("/api/v1/products") || path.startsWith("/api/v1/suppliers") || path.startsWith("/api/v1/purchases") || path.startsWith("/api/v1/visits")) {
+                    // Allow GET /api/v1/products (read only) but block POST/PUT/DELETE for products!
+                    if (path.startsWith("/api/v1/products") && !"GET".equalsIgnoreCase(request.getMethod())) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"error\": \"Forbidden\", \"message\": \"Access denied. Cashiers and sales staff cannot modify products or inventory.\"}");
+                        return false;
+                    }
+                    if (path.startsWith("/api/v1/suppliers") || path.startsWith("/api/v1/purchases") || path.startsWith("/api/v1/visits")) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"error\": \"Forbidden\", \"message\": \"Access denied. Cashiers and sales staff do not have access to suppliers, purchase logs, or field visits.\"}");
+                        return false;
+                    }
+                }
+            } else if (isField) {
+                // Field agents should ONLY access: Farmers, Visits
+                // Block access to: Products, Suppliers, Purchase Entries, Credit Book, Sales
+                if (path.startsWith("/api/v1/products") || path.startsWith("/api/v1/suppliers") || path.startsWith("/api/v1/purchases") || path.startsWith("/api/v1/sales") || path.startsWith("/api/v1/credit")) {
+                    if (path.startsWith("/api/v1/products") && !"GET".equalsIgnoreCase(request.getMethod())) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"error\": \"Forbidden\", \"message\": \"Access denied. Field agents cannot modify products or inventory.\"}");
+                        return false;
+                    }
+                    if (path.startsWith("/api/v1/suppliers") || path.startsWith("/api/v1/purchases") || path.startsWith("/api/v1/sales") || path.startsWith("/api/v1/credit")) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"error\": \"Forbidden\", \"message\": \"Access denied. Field agents only have access to farmers and field visits tracker.\"}");
+                        return false;
+                    }
+                }
+            } else {
+                // General fallback: restrict everything except baseline read access
+                if (path.startsWith("/api/v1/staff") || path.startsWith("/api/v1/dealers") || path.startsWith("/api/v1/suppliers") || path.startsWith("/api/v1/purchases") || path.startsWith("/api/v1/sales") || path.startsWith("/api/v1/credit") || path.startsWith("/api/v1/visits")) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\": \"Forbidden\", \"message\": \"Access denied. General staff roles have restricted module permissions.\"}");
+                    return false;
+                }
+            }
+        }
 
         // Role-Based Authorization check
         if (handler instanceof HandlerMethod) {

@@ -295,4 +295,21 @@ public class SubscriptionService {
         }
         return planRepository.save(plan);
     }
+
+    @Transactional
+    public void deletePlan(Long id) {
+        if (!SecurityUtils.isSuperAdmin()) {
+            throw new AccessDeniedException("Only Super Admin can delete subscription plans");
+        }
+        SubscriptionPlan plan = planRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Plan not found with ID: " + id));
+
+        // Check if there are active subscriptions using this plan
+        boolean hasDealers = subscriptionRepository.findAll().stream()
+                .anyMatch(s -> s.getPlan() != null && s.getPlan().getId().equals(id));
+        if (hasDealers) {
+            throw new IllegalArgumentException("Cannot delete plan as it is currently linked to dealers' subscriptions. Set status to INACTIVE instead.");
+        }
+        planRepository.delete(plan);
+    }
 }

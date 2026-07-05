@@ -30,12 +30,15 @@ public class JwtUtils {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateAccessToken(String username, Long dealerId, String role, String permissions, String sessionId) {
+    public String generateAccessToken(String username, Long dealerId, String role, String permissions, String sessionId, Long userId, String department, String designation) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("dealerId", dealerId);
         claims.put("role", role);
         claims.put("permissions", permissions);
         claims.put("sessionId", sessionId);
+        claims.put("userId", userId);
+        claims.put("department", department);
+        claims.put("designation", designation);
 
         return Jwts.builder()
                 .setClaims(claims)

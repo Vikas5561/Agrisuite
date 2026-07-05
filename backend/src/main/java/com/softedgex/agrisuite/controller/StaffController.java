@@ -44,6 +44,22 @@ public class StaffController {
         return ResponseEntity.ok(body);
     }
 
+    @PutMapping("/{id}/activate")
+    public ResponseEntity<?> activateStaff(@PathVariable Long id) {
+        staffService.setStaffStatus(id, "ACTIVE");
+        Map<String, String> body = new HashMap<>();
+        body.put("message", "Staff member reactivated successfully");
+        return ResponseEntity.ok(body);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteStaff(@PathVariable Long id) {
+        staffService.deleteStaff(id);
+        Map<String, String> body = new HashMap<>();
+        body.put("message", "Staff member deleted successfully");
+        return ResponseEntity.ok(body);
+    }
+
     @PutMapping("/{id}/reset-password")
     public ResponseEntity<?> resetPassword(@PathVariable Long id, @RequestBody Map<String, String> requestBody) {
         String newPassword = requestBody.get("password");

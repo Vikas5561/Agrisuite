@@ -73,4 +73,12 @@ public class SubscriptionController {
     public ResponseEntity<SubscriptionPlan> createPlan(@RequestBody SubscriptionPlan plan) {
         return ResponseEntity.ok(subscriptionService.createPlan(plan));
     }
+
+    @DeleteMapping("/plans/{id}")
+    public ResponseEntity<?> deletePlan(@PathVariable Long id) {
+        subscriptionService.deletePlan(id);
+        Map<String, String> body = new HashMap<>();
+        body.put("message", "Subscription plan deleted successfully");
+        return ResponseEntity.ok(body);
+    }
 }

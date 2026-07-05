@@ -156,6 +156,16 @@ function App() {
             <VisitTracking />
           </ProtectedLayout>
         } />
+        <Route path="/staff/suppliers" element={
+          <ProtectedLayout allowedRoles={['STAFF']}>
+            <SupplierManagement />
+          </ProtectedLayout>
+        } />
+        <Route path="/staff/credit-book" element={
+          <ProtectedLayout allowedRoles={['STAFF']}>
+            <CreditBook />
+          </ProtectedLayout>
+        } />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

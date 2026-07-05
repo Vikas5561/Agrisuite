@@ -33,5 +33,7 @@ public class UserContext {
         private Long dealerId;
         private String role;
         private List<String> permissions;
+        private String department;
+        private String designation;
     }
 }

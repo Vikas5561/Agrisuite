@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../context/AuthContext';
-import { RotateCw, Edit, Plus, Check, Play, AlertCircle } from 'lucide-react';
+import { RotateCw, Edit, Plus, Check, Play, AlertCircle, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const PlansManagement = () => {
@@ -11,6 +11,17 @@ export const PlansManagement = () => {
   // Edit Modal State
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  const handleDeletePlan = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this subscription plan? This action cannot be undone.")) return;
+    try {
+      await api.delete(`/api/v1/subscriptions/plans/${id}`);
+      alert("Subscription plan deleted successfully.");
+      fetchPlans();
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to delete subscription plan.");
+    }
+  };
 
   // Form Fields
   const [name, setName] = useState('');
@@ -201,10 +212,15 @@ export const PlansManagement = () => {
                   </div>
                 </div>
 
-                <button onClick={() => handleEditClick(p)} className="btn btn-secondary" style={{ width: '100%', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                  <Edit size={16} />
-                  <span>Edit Plan & Apply Offers</span>
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                  <button onClick={() => handleEditClick(p)} className="btn btn-secondary" style={{ flex: 1, display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                    <Edit size={16} />
+                    <span>Edit Plan & Offers</span>
+                  </button>
+                  <button onClick={() => handleDeletePlan(p.id)} className="btn btn-danger" style={{ padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Delete Plan">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </motion.div>
             );
           })}

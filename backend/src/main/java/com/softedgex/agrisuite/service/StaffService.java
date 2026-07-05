@@ -185,4 +185,20 @@ public class StaffService {
             userRepository.save(user);
         }
     }
+
+    @Transactional
+    public void deleteStaff(Long id) {
+        Long dealerId = SecurityUtils.getCurrentDealerId();
+        Staff staff = staffRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Staff member not found"));
+
+        if (!staff.getDealerId().equals(dealerId)) {
+            throw new AccessDeniedException("Access denied");
+        }
+
+        if (staff.getUserId() != null) {
+            userRepository.deleteById(staff.getUserId());
+        }
+        staffRepository.delete(staff);
+    }
 }
