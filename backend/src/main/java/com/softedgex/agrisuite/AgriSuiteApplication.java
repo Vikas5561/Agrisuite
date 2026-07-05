@@ -5,10 +5,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.TimeZone;
 
 @SpringBootApplication
 public class AgriSuiteApplication {
     public static void main(String[] args) {
+        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Kolkata"));
         loadDotEnv();
         SpringApplication.run(AgriSuiteApplication.class, args);
     }

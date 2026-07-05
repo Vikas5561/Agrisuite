@@ -22,6 +22,7 @@ export const StaffManagement = () => {
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState(null);
 
   // Form fields
   const [firstName, setFirstName] = useState('');
@@ -54,10 +55,18 @@ export const StaffManagement = () => {
       const staffData = {
         firstName, lastName, email, mobile, department, designation, joiningDate
       };
-      await api.post('/api/v1/staff', staffData);
+      const res = await api.post('/api/v1/staff', staffData);
+      const createdStaff = res.data;
+
       setShowAddModal(false);
       // Reset
       setFirstName(''); setLastName(''); setEmail(''); setMobile(''); setDesignation('');
+      
+      // Capture generated credentials
+      setCreatedCredentials({
+        username: createdStaff.employeeCode.toLowerCase(),
+        password: 'Staff@123'
+      });
       fetchStaff();
     } catch (err) {
       alert(err.response?.data?.message || 'Error creating staff. Check subscription limits.');
@@ -265,6 +274,46 @@ export const StaffManagement = () => {
                 <button type="submit" className="btn btn-primary">{t('createAccount', language)}</button>
               </div>
             </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Staff Credentials Alert Popup */}
+      {createdCredentials && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.8)',
+          zIndex: 110,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem'
+        }}>
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="glass-panel"
+            style={{ width: '100%', maxWidth: '440px', padding: '2.5rem', borderLeft: '4px solid var(--accent-primary)', textAlign: 'center' }}
+          >
+            <Check size={48} style={{ color: 'var(--accent-primary)', margin: '0 auto 1.5rem auto', background: 'var(--accent-glow)', padding: '0.5rem', borderRadius: '50%' }} />
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>Employee Created</h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+              The staff member has been registered. Share these temporary login details with the employee:
+            </p>
+            <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', textAlign: 'left', marginBottom: '2rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Username:</span>
+                <code style={{ fontWeight: 'bold', color: 'var(--accent-primary)' }}>{createdCredentials.username}</code>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Temporary Password:</span>
+                <code style={{ fontWeight: 'bold', color: 'var(--accent-secondary)' }}>{createdCredentials.password}</code>
+              </div>
+            </div>
+            <button onClick={() => setCreatedCredentials(null)} className="btn btn-primary" style={{ width: '100%' }}>
+              Got It, Continue
+            </button>
           </motion.div>
         </div>
       )}

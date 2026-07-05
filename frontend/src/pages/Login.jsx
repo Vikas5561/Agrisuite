@@ -286,18 +286,6 @@ export const Login = () => {
             </button>
           </form>
 
-          <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(255,255,255,0.01)', border: '1px dashed var(--border-glass)', borderRadius: '8px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            <div>Local Sandbox Credentials:</div>
-            <div style={{ marginTop: '0.25rem', display: 'flex', justifyContent: 'space-between' }}>
-              <span>Super Admin:</span>
-              <code style={{color: 'var(--accent-secondary)'}}>superadmin / Password@123</code>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Dealer Admin (Demo):</span>
-              <code style={{color: 'var(--accent-primary)'}}>dealer1 / Password@123</code>
-            </div>
-          </div>
-
           <div style={{ textAlign: 'center', marginTop: '2.5rem', fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 500, letterSpacing: '0.5px' }}>
             © {new Date().getFullYear()} SoftEdgex Technologies. All rights reserved.
           </div>
