@@ -33,6 +33,10 @@ export const NotificationCenter = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [historySearch, setHistorySearch] = useState('');
   const [groupMode, setGroupMode] = useState('CHRONOLOGICAL'); // 'CHRONOLOGICAL', 'CHANNEL', 'TYPE'
+  const [commMode, setCommMode] = useState('UNIVERSAL'); // 'UNIVERSAL', 'PERSONAL_WHATSAPP'
+  const [personalWhatsAppQueue, setPersonalWhatsAppQueue] = useState([]);
+  const [showQueueModal, setShowQueueModal] = useState(false);
+  const [queueSentMap, setQueueSentMap] = useState({});
 
   const fetchNotificationLogs = async () => {
     setLoading(true);
@@ -165,6 +169,38 @@ export const NotificationCenter = () => {
       return;
     }
 
+    if (commMode === 'PERSONAL_WHATSAPP') {
+      const selectedFarmersList = farmers.filter(f => selectedFarmerIds.includes(f.id));
+      
+      if (selectedFarmersList.length === 1) {
+        const f = selectedFarmersList[0];
+        const cleanPhone = f.mobile.replace(/[^0-9]/g, '');
+        const formattedPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+        const resolvedText = resolveUIPlaceholders(messageText, [f.id]);
+        window.open(`https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(resolvedText)}`, '_blank');
+        
+        // Log to database as sent via personal channel
+        try {
+          const payload = {
+            recipientName: `${f.firstName} ${f.lastName}`,
+            channel: 'WHATSAPP',
+            message: resolvedText,
+            status: 'SENT'
+          };
+          await api.post('/api/v1/notifications', payload);
+          setMessageText('');
+          setSelectedFarmerIds([]);
+          fetchNotificationLogs();
+        } catch (err) {
+          console.error(err);
+        }
+      } else {
+        setPersonalWhatsAppQueue(selectedFarmersList);
+        setShowQueueModal(true);
+      }
+      return;
+    }
+
     try {
       const payload = {
         farmerIds: selectedFarmerIds,
@@ -173,7 +209,7 @@ export const NotificationCenter = () => {
       };
       
       await api.post('/api/v1/notifications/broadcast', payload);
-      alert(`Broadcast logged successfully! Simulated ${selectedChannel} queue dispatched to ${selectedFarmerIds.length} farmers.`);
+      alert(`Broadcast logged successfully! Universal ${selectedChannel} queue dispatched to ${selectedFarmerIds.length} farmers.`);
       
       setMessageText('');
       setSelectedFarmerIds([]);
@@ -375,14 +411,29 @@ export const NotificationCenter = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem' }}>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                {t('recipientsSelected', language)}: <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{selectedFarmerIds.length}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '2rem', borderTop: '1px solid var(--border-glass)', paddingTop: '1.5rem' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontWeight: 'bold' }}>Communication Mode</label>
+                <select 
+                  className="input-field" 
+                  value={commMode} 
+                  onChange={(e) => setCommMode(e.target.value)}
+                  style={{ background: '#121b16', width: '100%' }}
+                >
+                  <option value="UNIVERSAL">Broadcast via Universal Number (Auto)</option>
+                  <option value="PERSONAL_WHATSAPP">Personal WhatsApp (Manual)</option>
+                </select>
               </div>
-              <button type="submit" className="btn btn-primary">
-                <Send size={16} />
-                <span>{t('dispatchBroadcast', language)}</span>
-              </button>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  {t('recipientsSelected', language)}: <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{selectedFarmerIds.length}</span>
+                </div>
+                <button type="submit" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Send size={16} />
+                  <span>{commMode === 'PERSONAL_WHATSAPP' ? 'Start Personal WhatsApp' : t('dispatchBroadcast', language)}</span>
+                </button>
+              </div>
             </div>
           </form>
         </div>
@@ -567,6 +618,98 @@ export const NotificationCenter = () => {
         </div>
 
       </div>
+
+      {showQueueModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.85)',
+          zIndex: 9999,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          backdropFilter: 'blur(8px)'
+        }}>
+          <div className="glass-panel" style={{
+            padding: '2.5rem',
+            width: '100%',
+            maxWidth: '500px',
+            background: 'var(--bg-glass-heavy)',
+            border: '1px solid var(--border-glass)',
+            borderRadius: '16px'
+          }}>
+            <h3 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '1rem', color: '#ffffff' }}>
+              Personal WhatsApp Dispatcher
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+              To bypass browser popup blockers, please click the send button for each farmer below. WhatsApp Web will open with the pre-filled message.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '300px', overflowY: 'auto', marginBottom: '2rem' }}>
+              {personalWhatsAppQueue.map(f => {
+                const cleanPhone = f.mobile.replace(/[^0-9]/g, '');
+                const formattedPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+                const resolvedText = resolveUIPlaceholders(messageText, [f.id]);
+                const isSent = queueSentMap[f.id];
+
+                return (
+                  <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
+                    <div>
+                      <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: isSent ? 'var(--text-muted)' : '#ffffff', textDecoration: isSent ? 'line-through' : 'none' }}>
+                        {f.firstName} {f.lastName}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        {f.mobile}
+                      </div>
+                    </div>
+
+                    <a
+                      href={`https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(resolvedText)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setQueueSentMap(prev => ({ ...prev, [f.id]: true }))}
+                      className="btn btn-secondary"
+                      style={{
+                        padding: '0.35rem 0.75rem',
+                        fontSize: '0.75rem',
+                        display: 'inline-flex',
+                        gap: '0.25rem',
+                        alignItems: 'center',
+                        borderColor: isSent ? 'var(--text-muted)' : '#22c55e',
+                        background: isSent ? 'rgba(255,255,255,0.01)' : 'rgba(34, 197, 94, 0.05)',
+                        color: isSent ? 'var(--text-muted)' : '#ffffff',
+                        border: '1px solid'
+                      }}
+                    >
+                      <MessageSquare size={12} style={{ color: isSent ? 'var(--text-muted)' : '#22c55e' }} />
+                      <span>{isSent ? 'Sent (Reopen)' : 'Send WhatsApp'}</span>
+                    </a>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+              <button 
+                type="button" 
+                onClick={() => {
+                  setShowQueueModal(false);
+                  setQueueSentMap({});
+                  setMessageText('');
+                  setSelectedFarmerIds([]);
+                  fetchNotificationLogs();
+                }}
+                className="btn btn-primary"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
