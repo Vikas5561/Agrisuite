@@ -1,6 +1,7 @@
 package com.softedgex.agrisuite.security;
 
 import com.softedgex.agrisuite.util.JwtUtils;
+import com.softedgex.agrisuite.repository.UserSessionRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,6 +18,9 @@ public class SecurityInterceptor implements HandlerInterceptor {
 
     @Autowired
     private JwtUtils jwtUtils;
+
+    @Autowired
+    private UserSessionRepository userSessionRepository;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -49,6 +53,17 @@ public class SecurityInterceptor implements HandlerInterceptor {
         }
 
         Claims claims = jwtUtils.getClaimsFromToken(token);
+        String sessionId = claims.get("sessionId", String.class);
+        if (sessionId != null) {
+            java.util.Optional<com.softedgex.agrisuite.model.UserSession> sessionOpt = userSessionRepository.findById(sessionId);
+            if (sessionOpt.isEmpty() || !"ACTIVE".equalsIgnoreCase(sessionOpt.get().getStatus())) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"error\": \"Unauthorized\", \"message\": \"Session has been terminated by administrator.\"}");
+                return false;
+            }
+        }
+
         String username = claims.getSubject();
         Long dealerId = claims.get("dealerId", Long.class);
         String role = claims.get("role", String.class);

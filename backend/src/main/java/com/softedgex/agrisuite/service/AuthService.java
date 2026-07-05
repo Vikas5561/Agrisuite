@@ -127,11 +127,11 @@ public class AuthService {
 
         // Generate tokens
         String roleName = user.getRole() != null ? user.getRole().getRoleName() : "STAFF";
-        String token = jwtUtils.generateAccessToken(user.getUsername(), user.getDealerId(), roleName, permissionsStr);
+        String sessionId = UUID.randomUUID().toString();
+        String token = jwtUtils.generateAccessToken(user.getUsername(), user.getDealerId(), roleName, permissionsStr, sessionId);
         String refreshToken = jwtUtils.generateRefreshToken(user.getUsername());
 
         // Track user session
-        String sessionId = UUID.randomUUID().toString();
         UserSession session = UserSession.builder()
                 .sessionId(sessionId)
                 .userId(user.getId())
@@ -224,7 +224,7 @@ public class AuthService {
         }
         String permissionsStr = String.join(",", permissions);
 
-        String newAccessToken = jwtUtils.generateAccessToken(user.getUsername(), user.getDealerId(), roleName, permissionsStr);
+        String newAccessToken = jwtUtils.generateAccessToken(user.getUsername(), user.getDealerId(), roleName, permissionsStr, session.getSessionId());
         String newRefreshToken = jwtUtils.generateRefreshToken(user.getUsername());
 
         // Rotate Refresh Token
