@@ -55,10 +55,24 @@ public class NotificationService {
         if (dealerId != null) {
             Optional<Dealer> dealerOpt = dealerRepository.findById(dealerId);
             if (dealerOpt.isPresent()) {
-                String bizName = dealerOpt.get().getBusinessName();
+                Dealer dealer = dealerOpt.get();
+                String bizName = dealer.getBusinessName();
                 resolved = resolved.replaceAll("(?i)\\{\\{\\s*dealer\\s*name\\s*\\}\\}", bizName);
                 resolved = resolved.replaceAll("(?i)\\{\\{\\s*delear\\s*name\\s*\\}\\}", bizName);
                 resolved = resolved.replaceAll("(?i)\\{\\{\\s*dealername\\s*\\}\\}", bizName);
+                
+                // Automatically append dealer sender contact details to the message signature
+                String footer = "\n\nSent by: " + bizName;
+                if (dealer.getMobile() != null && !dealer.getMobile().isBlank()) {
+                    footer += "\nMobile: " + dealer.getMobile();
+                }
+                if (dealer.getEmail() != null && !dealer.getEmail().isBlank()) {
+                    footer += "\nEmail: " + dealer.getEmail();
+                }
+                
+                if (!resolved.contains(bizName)) {
+                    resolved = resolved + footer;
+                }
             }
         }
         return resolved;

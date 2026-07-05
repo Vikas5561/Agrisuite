@@ -468,7 +468,50 @@ export const NotificationCenter = () => {
                             </span>
                           </div>
 
-                          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'pre-line' }}>{log.message}</p>
+                          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'pre-line', marginBottom: '0.75rem' }}>{log.message}</p>
+
+                          {(() => {
+                            const targetFarmer = farmers.find(f => `${f.firstName} ${f.lastName}` === log.recipientName);
+                            if (!targetFarmer) return null;
+                            const cleanPhone = targetFarmer.mobile.replace(/[^0-9]/g, '');
+                            const formattedPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+                            return (
+                              <div style={{ display: 'flex', gap: '0.5rem', borderTop: '1px solid var(--border-glass)', paddingTop: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                                {log.channel === 'WHATSAPP' && (
+                                  <a 
+                                    href={`https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(log.message)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-secondary"
+                                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem', display: 'inline-flex', gap: '0.25rem', alignItems: 'center', borderColor: '#22c55e', background: 'rgba(34, 197, 94, 0.05)', color: '#ffffff' }}
+                                  >
+                                    <MessageSquare size={12} style={{ color: '#22c55e' }} />
+                                    <span>Send via Personal WhatsApp</span>
+                                  </a>
+                                )}
+                                {log.channel === 'SMS' && (
+                                  <a 
+                                    href={`sms:${formattedPhone}?body=${encodeURIComponent(log.message)}`}
+                                    className="btn btn-secondary"
+                                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem', display: 'inline-flex', gap: '0.25rem', alignItems: 'center', borderColor: '#fbbf24', background: 'rgba(251, 191, 36, 0.05)', color: '#ffffff' }}
+                                  >
+                                    <Phone size={12} style={{ color: '#fbbf24' }} />
+                                    <span>Send via Device SMS</span>
+                                  </a>
+                                )}
+                                {log.channel === 'EMAIL' && targetFarmer.email && (
+                                  <a 
+                                    href={`mailto:${targetFarmer.email}?subject=Notification from ${user?.businessName || 'AgriSuite'}&body=${encodeURIComponent(log.message)}`}
+                                    className="btn btn-secondary"
+                                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem', display: 'inline-flex', gap: '0.25rem', alignItems: 'center', borderColor: '#3b82f6', background: 'rgba(59, 130, 246, 0.05)', color: '#ffffff' }}
+                                  >
+                                    <Mail size={12} style={{ color: '#3b82f6' }} />
+                                    <span>Send via Personal Email</span>
+                                  </a>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       );
                     })}
