@@ -241,4 +241,19 @@ public class DealerService {
         settings.setDealerId(dealerId);
         return dealerSettingsRepository.save(settings);
     }
+
+    @Transactional
+    public void resetDealerPassword(Long dealerId, String newPassword) {
+        if (!SecurityUtils.isSuperAdmin()) {
+            throw new AccessDeniedException("Only Super Admin can reset dealer passwords");
+        }
+        List<User> users = userRepository.findByDealerId(dealerId);
+        User dealerAdmin = users.stream()
+                .filter(u -> "DEALER_ADMIN".equalsIgnoreCase(u.getRole().getRoleName()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Dealer admin user account not found"));
+
+        dealerAdmin.setPassword(passwordUtils.encode(newPassword));
+        userRepository.save(dealerAdmin);
+    }
 }

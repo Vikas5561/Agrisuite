@@ -50,6 +50,11 @@ public class SubscriptionController {
         return ResponseEntity.ok(subscriptionService.upgradeSubscription(dealerId, planId));
     }
 
+    @PostMapping("/upgrade-manual")
+    public ResponseEntity<DealerSubscription> upgradeSubscriptionManual(@RequestParam Long dealerId, @RequestParam Long planId) {
+        return ResponseEntity.ok(subscriptionService.upgradeSubscription(dealerId, planId));
+    }
+
     @PostMapping("/cancel")
     public ResponseEntity<DealerSubscription> cancelSubscription() {
         Long dealerId = SecurityUtils.getCurrentDealerId();

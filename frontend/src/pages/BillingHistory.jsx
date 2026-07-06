@@ -798,7 +798,8 @@ export const BillingHistory = () => {
 
       {/* POPUP OVERLAY: PRINTABLE CUSTOMER PURCHASE TAX INVOICE */}
       {activeSalesInvoice && (() => {
-        const logoSrc = dealerDetails?.logoUrl || user?.logoUrl;
+        const rawLogo = dealerDetails?.logoUrl || user?.logoUrl;
+        const logoSrc = (rawLogo && rawLogo.trim().length > 0) ? rawLogo : null;
         const totalAmount = activeSalesInvoice.totalAmount || 0;
         const amountPaidNow = activeSalesInvoice.amountPaid || 0;
         const outstandingBalance = activeSalesInvoice.outstandingBalance || 0;
@@ -1013,8 +1014,15 @@ export const BillingHistory = () => {
             {/* Store details header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #10b981', paddingBottom: '1.25rem', marginBottom: '1.5rem' }}>
               <div>
+                {localStorage.getItem('platformLogo') ? (
+                  <img 
+                    src={localStorage.getItem('platformLogo')} 
+                    style={{ height: '40px', width: 'auto', objectFit: 'contain', marginBottom: '0.5rem', display: 'block' }} 
+                    alt="Platform Logo" 
+                  />
+                ) : null}
                 <h3 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#111827', margin: 0, letterSpacing: '-0.5px' }}>
-                  {dealerDetails?.businessName || user?.businessName || 'Agriculture Software Services'}
+                  {localStorage.getItem('platformName') || 'SoftEdgeX AgriSuite Inc.'}
                 </h3>
                 <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>PLATFORM SUBSCRIPTION RECEIPT</span>
               </div>
@@ -1030,9 +1038,10 @@ export const BillingHistory = () => {
               <div style={{ padding: '1rem', background: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
                 <div style={{ fontWeight: 800, color: '#111827', marginBottom: '0.4rem', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Service Provider:</div>
                 <div style={{ fontSize: '0.85rem', color: '#4b5563' }}>
-                  SoftEdgeX AgriSuite Inc.<br />
-                  GSTIN: 27SFTEX8876P1Z9<br />
-                  Email: billing@softedgex.com
+                  {localStorage.getItem('platformName') || 'SoftEdgeX AgriSuite Inc.'}<br />
+                  GSTIN: {localStorage.getItem('platformGst') || '27SFTEX8876P1Z9'}<br />
+                  Email: {localStorage.getItem('platformEmail') || 'billing@softedgex.com'}<br />
+                  Address: {localStorage.getItem('platformAddress') || 'PO Box 3172, Redondo Beach, California 90277'}
                 </div>
               </div>
               

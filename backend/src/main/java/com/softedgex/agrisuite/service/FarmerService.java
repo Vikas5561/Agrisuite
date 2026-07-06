@@ -13,6 +13,8 @@ import com.softedgex.agrisuite.util.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.softedgex.agrisuite.dto.SalesInvoiceRequest;
+import org.springframework.context.annotation.Lazy;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +36,10 @@ public class FarmerService {
 
     @Autowired
     private SubscriptionService subscriptionService;
+
+    @Autowired
+    @Lazy
+    private SalesInvoiceService salesInvoiceService;
 
     public List<Farmer> getFarmers() {
         Long dealerId = SecurityUtils.getCurrentDealerId();
@@ -183,7 +189,7 @@ public class FarmerService {
     public Farmer sellProduct(Long farmerId, Long productId, Double quantity, String paymentMethod) {
         Long dealerId = SecurityUtils.getCurrentDealerId();
         Farmer farmer = getFarmerById(farmerId);
-        
+
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found"));
 
@@ -191,36 +197,35 @@ public class FarmerService {
             throw new AccessDeniedException("Access denied to product");
         }
 
-        if (product.getStock() < quantity) {
-            throw new IllegalArgumentException("Insufficient stock. Available: " + product.getStock() + " " + product.getUnit());
-        }
+        // Build SalesInvoiceRequest
+        SalesInvoiceRequest request = new SalesInvoiceRequest();
+        request.setFarmerId(farmerId);
+        request.setPaymentMethod(paymentMethod);
 
-        double pricePerUnit = product.getSellingPrice();
-        double baseAmount = pricePerUnit * quantity;
+        double baseAmount = product.getSellingPrice() * quantity;
         double gstAmount = baseAmount * (product.getGstPercentage() / 100.0);
         double totalAmount = baseAmount + gstAmount;
 
-        if ("CREDIT".equalsIgnoreCase(paymentMethod)) {
-            double newCredit = (farmer.getOutstandingCredit() != null ? farmer.getOutstandingCredit() : 0.0) + totalAmount;
-            farmer.setOutstandingCredit(newCredit);
-            farmerRepository.save(farmer);
-        }
+        request.setAmountPaid("CREDIT".equalsIgnoreCase(paymentMethod) ? 0.0 : totalAmount);
 
-        // Adjust product stock
-        product.setStock(product.getStock() - quantity);
-        productRepository.save(product);
+        SalesInvoiceRequest.SalesItem item = new SalesInvoiceRequest.SalesItem();
+        item.setProductId(productId);
+        item.setProductName(product.getName());
+        item.setBrand(product.getBrand());
+        item.setQuantity(quantity);
+        item.setUnit(product.getUnit());
+        item.setSellingPrice(product.getSellingPrice());
+        item.setGstPercentage(product.getGstPercentage());
+        item.setSubtotal(baseAmount);
+        item.setGstAmount(gstAmount);
+        item.setTotal(totalAmount);
 
-        // Add to timeline activity
-        String desc = String.format("Purchased %.1f %s of %s (%s) for ₹%,.2f via %s", 
-                quantity, product.getUnit(), product.getName(), product.getBrand(), totalAmount, paymentMethod);
-        FarmerActivity activity = FarmerActivity.builder()
-                .farmerId(farmerId)
-                .activityType("Purchase")
-                .description(desc)
-                .build();
-        activityRepository.save(activity);
+        request.setItems(java.util.List.of(item));
 
-        return farmer;
+        // Route through standard billing service
+        salesInvoiceService.createSalesInvoice(request);
+
+        return farmerRepository.findById(farmerId).orElse(farmer);
     }
 
     @Transactional

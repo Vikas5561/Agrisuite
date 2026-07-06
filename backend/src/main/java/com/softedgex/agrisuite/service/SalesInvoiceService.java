@@ -12,10 +12,13 @@ import com.softedgex.agrisuite.repository.FarmerRepository;
 import com.softedgex.agrisuite.repository.ProductRepository;
 import com.softedgex.agrisuite.repository.SalesInvoiceRepository;
 import com.softedgex.agrisuite.util.SecurityUtils;
+import com.softedgex.agrisuite.model.Dealer;
+import com.softedgex.agrisuite.model.Notification;
+import com.softedgex.agrisuite.repository.DealerRepository;
+import com.softedgex.agrisuite.repository.NotificationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 
 @Service
@@ -38,6 +41,15 @@ public class SalesInvoiceService {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private TwilioService twilioService;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
+    private DealerRepository dealerRepository;
 
     public List<SalesInvoice> getSalesHistory() {
         Long dealerId = SecurityUtils.getCurrentDealerId();
@@ -159,7 +171,54 @@ public class SalesInvoiceService {
                 .description(desc)
                 .build());
 
+        // Automatically dispatch invoice details via Universal WhatsApp
+        try {
+            String whatsappMsg = String.format(
+                "Dear %s %s,\nYour purchase is successful under Invoice %s.\nTotal Amount: ₹%,.2f via %s.\nOutstanding Udhar Balance: ₹%,.2f.\nThank you for business with us!",
+                farmer.getFirstName(), farmer.getLastName(),
+                invoiceNumber, invoiceTotal, request.getPaymentMethod(),
+                farmer.getOutstandingCredit()
+            );
+            whatsappMsg = resolveTemplateSignature(whatsappMsg, dealerId);
+            
+            twilioService.sendWhatsApp(farmer.getMobile(), whatsappMsg);
+            
+            // Also log the notification
+            notificationRepository.save(Notification.builder()
+                    .dealerId(dealerId)
+                    .recipientName(farmer.getFirstName() + " " + farmer.getLastName())
+                    .channel("WHATSAPP")
+                    .message(whatsappMsg)
+                    .status("SENT")
+                    .build());
+        } catch (Exception ex) {
+            System.err.println("Failed to automatically send WhatsApp invoice: " + ex.getMessage());
+        }
+
         return savedInvoice;
+    }
+
+    private String resolveTemplateSignature(String message, Long dealerId) {
+        if (message == null) return "";
+        String resolved = message;
+        if (dealerId != null) {
+            java.util.Optional<com.softedgex.agrisuite.model.Dealer> dealerOpt = dealerRepository.findById(dealerId);
+            if (dealerOpt.isPresent()) {
+                com.softedgex.agrisuite.model.Dealer dealer = dealerOpt.get();
+                String bizName = dealer.getBusinessName();
+                String footer = "\n\nSent by: " + bizName;
+                if (dealer.getMobile() != null && !dealer.getMobile().isBlank()) {
+                    footer += "\nMobile: " + dealer.getMobile();
+                }
+                if (dealer.getEmail() != null && !dealer.getEmail().isBlank()) {
+                    footer += "\nEmail: " + dealer.getEmail();
+                }
+                if (!resolved.contains(bizName)) {
+                    resolved = resolved + footer;
+                }
+            }
+        }
+        return resolved;
     }
 
     public List<SalesInvoice> getSalesByFarmer(Long farmerId) {

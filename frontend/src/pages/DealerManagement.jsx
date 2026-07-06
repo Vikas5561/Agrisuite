@@ -15,7 +15,9 @@ import {
   Plus,
   Edit,
   X,
-  FileText
+  FileText,
+  Key,
+  TrendingUp
 } from 'lucide-react';
 
 export const DealerManagement = () => {
@@ -24,6 +26,10 @@ export const DealerManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeDealer, setUpgradeDealer] = useState(null);
+  const [selectedPlanId, setSelectedPlanId] = useState('');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -98,6 +104,42 @@ export const DealerManagement = () => {
       fetchDealers();
     } catch (err) {
       alert('Error extending subscription.');
+    }
+  };
+
+  const handleResetPassword = async (id) => {
+    const password = prompt('Enter new password for this dealer admin user:');
+    if (!password) return;
+    if (password.length < 6) {
+      alert('Password must be at least 6 characters.');
+      return;
+    }
+    try {
+      await api.put(`/api/v1/dealers/${id}/reset-password`, { password });
+      alert('Dealer password reset successfully');
+    } catch (err) {
+      alert('Error resetting password.');
+    }
+  };
+
+  const handleOpenUpgrade = (dealer) => {
+    setUpgradeDealer(dealer);
+    setSelectedPlanId(plans[0]?.id || '');
+    setShowUpgradeModal(true);
+  };
+
+  const handleConfirmUpgrade = async () => {
+    if (!selectedPlanId) {
+      alert('Please select a plan.');
+      return;
+    }
+    try {
+      await api.post(`/api/v1/subscriptions/upgrade-manual?dealerId=${upgradeDealer.id}&planId=${selectedPlanId}`);
+      alert('Dealer subscription upgraded successfully');
+      setShowUpgradeModal(false);
+      fetchDealers();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error upgrading subscription.');
     }
   };
 
@@ -254,6 +296,15 @@ export const DealerManagement = () => {
                   <span>Edit</span>
                 </button>
                 <button 
+                  onClick={() => handleResetPassword(d.id)}
+                  className="btn btn-secondary"
+                  style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem' }}
+                  title="Reset Password"
+                >
+                  <Key size={14} />
+                  <span>Reset Pwd</span>
+                </button>
+                <button 
                   onClick={() => handleToggleStatus(d.id, d.status)}
                   className={`btn ${d.status === 'ACTIVE' ? 'btn-danger' : 'btn-primary'}`}
                   style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem' }}
@@ -268,6 +319,14 @@ export const DealerManagement = () => {
                 >
                   <Clock size={14} />
                   <span>Extend</span>
+                </button>
+                <button 
+                  onClick={() => handleOpenUpgrade(d)}
+                  className="btn btn-primary"
+                  style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem', background: '#059669', borderColor: '#059669' }}
+                >
+                  <TrendingUp size={14} />
+                  <span>Upgrade</span>
                 </button>
               </div>
             </motion.div>
@@ -496,6 +555,51 @@ export const DealerManagement = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Manual Upgrade Modal Overlay */}
+      {showUpgradeModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.7)',
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem'
+        }}>
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="glass-panel"
+            style={{ width: '100%', maxWidth: '440px', padding: '2.5rem' }}
+          >
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--accent-primary)' }}>Upgrade Subscription</h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.4' }}>
+              Select a new subscription plan to upgrade <strong>{upgradeDealer?.businessName}</strong> manually. The new plan duration will start immediately from today.
+            </p>
+            
+            <div className="form-group">
+              <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem' }}>Select Subscription Plan *</label>
+              <select 
+                className="input-field" 
+                value={selectedPlanId} 
+                onChange={(e) => setSelectedPlanId(e.target.value)}
+                style={{ background: '#121b16', width: '100%' }}
+              >
+                {plans.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} - {p.durationMonths} Months (₹{p.price})</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '2rem' }}>
+              <button onClick={() => setShowUpgradeModal(false)} className="btn btn-secondary">Cancel</button>
+              <button onClick={handleConfirmUpgrade} className="btn btn-primary">Confirm Upgrade</button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

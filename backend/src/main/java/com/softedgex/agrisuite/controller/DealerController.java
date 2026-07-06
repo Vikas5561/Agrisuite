@@ -71,4 +71,16 @@ public class DealerController {
         body.put("message", "Logo updated successfully");
         return ResponseEntity.ok(body);
     }
+
+    @PutMapping("/{id}/reset-password")
+    public ResponseEntity<?> resetDealerPassword(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+        String newPassword = payload.get("password");
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new IllegalArgumentException("Password cannot be empty");
+        }
+        dealerService.resetDealerPassword(id, newPassword);
+        Map<String, String> body = new HashMap<>();
+        body.put("message", "Dealer password reset successfully");
+        return ResponseEntity.ok(body);
+    }
 }

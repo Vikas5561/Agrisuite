@@ -127,7 +127,21 @@ export const ProtectedLayout = ({ children, allowedRoles }) => {
       >
         <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', flexShrink: 0 }}>
-            {user.logoUrl ? (
+            {user.role === 'SUPER_ADMIN' && localStorage.getItem('platformLogo') ? (
+              <img 
+                src={localStorage.getItem('platformLogo')} 
+                alt="Corporate Logo" 
+                style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '8px', 
+                  objectFit: 'contain', 
+                  background: '#ffffff',
+                  padding: '2px',
+                  border: '1px solid var(--border-glass)' 
+                }} 
+              />
+            ) : user.logoUrl ? (
               <img 
                 src={user.logoUrl} 
                 alt="Business Logo" 
@@ -147,11 +161,11 @@ export const ProtectedLayout = ({ children, allowedRoles }) => {
               </div>
             )}
             <div>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 800, letterSpacing: '-0.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '170px' }} title={user.businessName || 'AgriSuite'}>
-                {user.businessName || 'AgriSuite'}
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 800, letterSpacing: '-0.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '170px' }} title={user.role === 'SUPER_ADMIN' ? (localStorage.getItem('platformName') || 'AgriSuite SuperAdmin') : (user.businessName || 'AgriSuite')}>
+                {user.role === 'SUPER_ADMIN' ? (localStorage.getItem('platformName') || 'AgriSuite SuperAdmin') : (user.businessName || 'AgriSuite')}
               </h2>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                {user.businessName ? 'AgriSuite' : 'SoftEdgeX Tech'}
+                {user.role === 'SUPER_ADMIN' ? 'AgriSuite Platform' : 'SoftEdgeX Tech'}
               </span>
             </div>
           </div>
@@ -198,7 +212,20 @@ export const ProtectedLayout = ({ children, allowedRoles }) => {
         {/* User profile footer */}
         <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '1rem', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-            {user.logoUrl ? (
+            {user.role === 'SUPER_ADMIN' && localStorage.getItem('platformLogo') ? (
+              <img 
+                src={localStorage.getItem('platformLogo')} 
+                alt="Superadmin Avatar" 
+                style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%', 
+                  objectFit: 'cover', 
+                  background: '#ffffff',
+                  border: '1px solid var(--border-glass)' 
+                }} 
+              />
+            ) : user.logoUrl ? (
               <img 
                 src={user.logoUrl} 
                 alt="Dealer Logo" 
