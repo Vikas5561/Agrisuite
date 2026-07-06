@@ -17,7 +17,16 @@ public class WebConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(securityInterceptor)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/api/v1/auth/**", "/h2-console/**", "/api/v1/payments/webhook");
+                .excludePathPatterns(
+                        "/api/v1/auth/login",
+                        "/api/v1/auth/forgot-password",
+                        "/api/v1/auth/verify-otp",
+                        "/api/v1/auth/reset-password",
+                        "/api/v1/auth/refresh",
+                        "/api/v1/auth/logout",
+                        "/h2-console/**",
+                        "/api/v1/payments/webhook"
+                );
     }
 
     @Override
