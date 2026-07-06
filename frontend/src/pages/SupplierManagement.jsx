@@ -138,9 +138,9 @@ export const SupplierManagement = () => {
       document.body.removeChild(link);
     } else {
       const csvContent = "data:text/csv;charset=utf-8," 
-        + "productName,supplierName,quantity,purchasePrice,gstPercentage,billNumber\n"
-        + "Urea 46%,Mahadhan Agri,150,266.50,5.0,BILL-2026-001\n"
-        + "Coragen,Bayer Seeds,25,1850.00,18.0,BILL-2026-002";
+        + "supplierName,productName,billNumber,quantity,purchasePrice,gstPercentage\n"
+        + "Mahadhan Agri,Urea 46%,BILL-2026-001,150,266.50,5.0\n"
+        + "Bayer Seeds,Coragen,BILL-2026-002,25,1850.00,18.0";
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);

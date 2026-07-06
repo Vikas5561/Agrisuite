@@ -102,9 +102,9 @@ export const ProductManagement = () => {
 
   const handleDownloadSample = () => {
     const csvContent = "data:text/csv;charset=utf-8," 
-      + "name,brand,category,productType,unit,stock,minimumStock,maximumStock,reorderLevel,purchasePrice,sellingPrice,mrp,gstPercentage,discountAllowed\n"
-      + "Urea 46%,IFFCO,Fertilizers,Fertilizer,Bag,120,20,500,50,266.5,300,350,5,true\n"
-      + "Coragen,FMC,Pesticides,Pesticide,Bottle,50,10,200,15,1850,2100,2200,18,false";
+      + "name,brand,category,productType,unit,stock,minimumStock,purchasePrice,sellingPrice,mrp,gstPercentage\n"
+      + "Urea 46%,IFFCO,Fertilizers,Fertilizer,Bag,100,10,1500,1800,1900,18\n"
+      + "Coragen,FMC,Pesticides,Pesticide,Bottle,50,5,1850,2100,2200,18";
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);

@@ -130,9 +130,9 @@ export const FarmerManagement = () => {
 
   const handleDownloadSample = () => {
     const csvContent = "data:text/csv;charset=utf-8," 
-      + "firstName,lastName,mobile,alternateMobile,village,taluka,district,state,pinCode,farmSize,farmUnit,soilType,irrigationType,primaryCrop,secondaryCrop,creditLimit,outstandingCredit\n"
-      + "Ramesh,Patil,9876543210,9876543211,Sinnar,Sinnar,Nashik,Maharashtra,422103,4.5,ACRES,Black,Drip,Onion,Tomato,50000,0\n"
-      + "Suresh,Deshmukh,8876543210,,Ozar,Niphad,Nashik,Maharashtra,422206,3.0,ACRES,Red,Flood,Grapes,Soybean,30000,5000";
+      + "firstName,lastName,mobile,outstandingCredit,village,taluka,district,state,pinCode,farmSize,farmUnit,primaryCrop\n"
+      + "Ramesh,Patil,9876543210,0,Sinnar,Sinnar,Nashik,Maharashtra,422103,4.5,Acre,Cotton\n"
+      + "Suresh,Deshmukh,8876543210,5000,Ozar,Niphad,Nashik,Maharashtra,422206,3.0,Acre,Grapes";
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
