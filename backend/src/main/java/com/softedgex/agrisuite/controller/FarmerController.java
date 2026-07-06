@@ -96,4 +96,9 @@ public class FarmerController {
         body.put("message", "Farmer profile deleted successfully");
         return ResponseEntity.ok(body);
     }
+
+    @PostMapping("/bulk")
+    public ResponseEntity<List<Farmer>> createFarmersBulk(@RequestBody List<Farmer> farmers) {
+        return ResponseEntity.ok(farmerService.createFarmersBulk(farmers));
+    }
 }

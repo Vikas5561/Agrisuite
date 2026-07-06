@@ -93,4 +93,33 @@ public class SupplierService {
         Supplier supplier = getSupplierById(id);
         supplierRepository.delete(supplier);
     }
+
+    @Transactional
+    public List<Supplier> createSuppliersBulk(List<Supplier> suppliers) {
+        Long dealerId = SecurityUtils.getCurrentDealerId();
+        if (dealerId == null) {
+            throw new AccessDeniedException("No dealer context");
+        }
+        if (!subscriptionService.checkFeatureAccess(dealerId)) {
+            throw new AccessDeniedException("Your subscription has expired or is in the Grace Period. You cannot add suppliers.");
+        }
+
+        List<Supplier> saved = new java.util.ArrayList<>();
+        for (Supplier s : suppliers) {
+            if (s.getCompanyName() == null || s.getCompanyName().isBlank()) {
+                continue;
+            }
+            // Skip duplicates by Company Name under same dealer
+            if (supplierRepository.findByDealerId(dealerId).stream()
+                    .anyMatch(sup -> sup.getCompanyName().equalsIgnoreCase(s.getCompanyName()))) {
+                continue;
+            }
+            long count = supplierRepository.count() + saved.size();
+            s.setSupplierCode(String.format("SPL%06d", count + 1));
+            s.setDealerId(dealerId);
+            s.setStatus("ACTIVE");
+            saved.add(supplierRepository.save(s));
+        }
+        return saved;
+    }
 }

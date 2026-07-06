@@ -61,4 +61,9 @@ public class ProductController {
         body.put("message", "Product deleted successfully");
         return ResponseEntity.ok(body);
     }
+
+    @PostMapping("/bulk")
+    public ResponseEntity<List<Product>> createProductsBulk(@RequestBody List<Product> products) {
+        return ResponseEntity.ok(productService.createProductsBulk(products));
+    }
 }

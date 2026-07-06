@@ -43,4 +43,9 @@ public class SupplierController {
         body.put("message", "Supplier deleted successfully");
         return ResponseEntity.ok(body);
     }
+
+    @PostMapping("/bulk")
+    public ResponseEntity<List<Supplier>> createSuppliersBulk(@RequestBody List<Supplier> suppliers) {
+        return ResponseEntity.ok(supplierService.createSuppliersBulk(suppliers));
+    }
 }

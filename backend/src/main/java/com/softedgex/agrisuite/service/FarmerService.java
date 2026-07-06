@@ -247,4 +247,43 @@ public class FarmerService {
 
         farmerRepository.delete(farmer);
     }
+
+    @Transactional
+    public List<Farmer> createFarmersBulk(List<Farmer> farmers) {
+        Long dealerId = SecurityUtils.getCurrentDealerId();
+        if (dealerId == null) {
+            throw new AccessDeniedException("No dealer context");
+        }
+        if (!subscriptionService.checkFeatureAccess(dealerId)) {
+            throw new AccessDeniedException("Your subscription has expired or is in the Grace Period. You cannot add new farmers.");
+        }
+
+        List<Farmer> saved = new java.util.ArrayList<>();
+        for (Farmer f : farmers) {
+            if (f.getMobile() == null || f.getMobile().isBlank()) {
+                continue;
+            }
+            // Skip duplicates by mobile number under same dealer
+            if (farmerRepository.findByMobileAndDealerId(f.getMobile(), dealerId).isPresent()) {
+                continue;
+            }
+            long count = farmerRepository.count() + saved.size();
+            String farmerCode = String.format("FRM%06d", count + 1);
+            f.setFarmerCode(farmerCode);
+            f.setDealerId(dealerId);
+            f.setStatus("ACTIVE");
+            if (f.getOutstandingCredit() == null) {
+                f.setOutstandingCredit(0.0);
+            }
+            Farmer savedFarmer = farmerRepository.save(f);
+            
+            activityRepository.save(FarmerActivity.builder()
+                    .farmerId(savedFarmer.getId())
+                    .activityType("Registration")
+                    .description("Farmer profile created via bulk import with code " + farmerCode)
+                    .build());
+            saved.add(savedFarmer);
+        }
+        return saved;
+    }
 }

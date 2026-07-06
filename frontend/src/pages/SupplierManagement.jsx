@@ -16,7 +16,9 @@ import {
   FileText,
   Calendar,
   DollarSign,
-  Briefcase
+  Briefcase,
+  Upload,
+  Download
 } from 'lucide-react';
 
 export const SupplierManagement = () => {
@@ -29,6 +31,10 @@ export const SupplierManagement = () => {
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [bulkPreview, setBulkPreview] = useState([]);
+  const [importing, setImporting] = useState(false);
+
   // Modals
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
@@ -74,6 +80,94 @@ export const SupplierManagement = () => {
       setError('Failed to fetch supplier or purchase data.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const parseCSV = (text) => {
+    const lines = text.split('\n');
+    if (lines.length <= 1) return [];
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^["']|["']$/g, ''));
+    const results = [];
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const values = [];
+      let currentVal = '';
+      let insideQuotes = false;
+      for (let j = 0; j < lines[i].length; j++) {
+        const char = lines[i][j];
+        if (char === '"' || char === "'") {
+          insideQuotes = !insideQuotes;
+        } else if (char === ',' && !insideQuotes) {
+          values.push(currentVal.trim().replace(/^["']|["']$/g, ''));
+          currentVal = '';
+        } else {
+          currentVal += char;
+        }
+      }
+      values.push(currentVal.trim().replace(/^["']|["']$/g, ''));
+      const row = {};
+      headers.forEach((header, idx) => {
+        row[header] = values[idx] || '';
+      });
+      results.push(row);
+    }
+    return results;
+  };
+
+  const handleFileParse = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const parsed = parseCSV(e.target.result);
+      setBulkPreview(parsed);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDownloadSample = () => {
+    if (activeTab === 'suppliers') {
+      const csvContent = "data:text/csv;charset=utf-8," 
+        + "companyName,category,gstNumber,panNumber,contactName,mobile,email,address,city,district,state,pinCode,creditDays,creditLimit\n"
+        + "Mahadhan Agri,Fertilizers,27ABCDE1234F1Z1,ABCDE1234F,Vijay Kumar,9876543222,vijay@mahadhan.com,GIDC Block 12,Nashik,Nashik,Maharashtra,422010,45,200000\n"
+        + "Bayer Seeds,Seeds,27FGHIJ5678K2Z2,FGHIJ5678K,Sanjay Patel,8876543222,sanjay@bayer.com,Industrial Zone Area,Pune,Pune,Maharashtra,411018,30,150000";
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "suppliers_sample_format.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      const csvContent = "data:text/csv;charset=utf-8," 
+        + "productName,supplierName,quantity,purchasePrice,gstPercentage,billNumber\n"
+        + "Urea 46%,Mahadhan Agri,150,266.50,5.0,BILL-2026-001\n"
+        + "Coragen,Bayer Seeds,25,1850.00,18.0,BILL-2026-002";
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "purchases_sample_format.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    setImporting(true);
+    try {
+      if (activeTab === 'suppliers') {
+        await api.post('/api/v1/suppliers/bulk', bulkPreview);
+        alert('Suppliers bulk imported successfully!');
+      } else {
+        await api.post('/api/v1/purchases/bulk', bulkPreview);
+        alert('Purchase transactions bulk imported successfully!');
+      }
+      setBulkPreview([]);
+      setShowBulkUpload(false);
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error bulk importing data.');
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -217,6 +311,10 @@ export const SupplierManagement = () => {
             <RotateCw size={16} />
             <span>Refresh</span>
           </button>
+          <button onClick={() => { setShowBulkUpload(!showBulkUpload); setBulkPreview([]); }} className="btn btn-secondary" style={{ border: showBulkUpload ? '1px solid var(--accent-primary)' : 'none' }}>
+            <Upload size={16} />
+            <span>Bulk Upload</span>
+          </button>
           {activeTab === 'suppliers' ? (
             <button onClick={() => setShowSupplierModal(true)} className="btn btn-primary">
               <Plus size={16} />
@@ -230,6 +328,116 @@ export const SupplierManagement = () => {
           )}
         </div>
       </div>
+
+      {/* BULK UPLOAD MODULE */}
+      {showBulkUpload && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          className="glass-panel" 
+          style={{ padding: '2rem', marginBottom: '2rem' }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Upload size={18} />
+              <span>Bulk Import CSV ({activeTab === 'suppliers' ? 'Suppliers' : 'Purchases'})</span>
+            </h2>
+            <button onClick={() => setShowBulkUpload(false)} className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>
+              Close
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem', alignItems: 'center' }}>
+            <div 
+              style={{ 
+                border: '2px dashed var(--border-glass)', 
+                borderRadius: '8px', 
+                padding: '2rem', 
+                textAlign: 'center', 
+                background: 'rgba(255,255,255,0.01)',
+                cursor: 'pointer',
+                transition: 'var(--transition-smooth)'
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const file = e.dataTransfer.files[0];
+                if (file) handleFileParse(file);
+              }}
+              onClick={() => document.getElementById('csv-file-input').click()}
+            >
+              <Upload size={32} style={{ color: 'var(--accent-primary)', marginBottom: '0.75rem' }} />
+              <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                Drag and drop your CSV file here, or <span style={{ color: 'var(--accent-primary)' }}>browse</span>
+              </p>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Only .csv files are supported</span>
+              <input 
+                id="csv-file-input" 
+                type="file" 
+                accept=".csv" 
+                style={{ display: 'none' }} 
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) handleFileParse(file);
+                }} 
+              />
+            </div>
+
+            <div>
+              <h4 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '0.5rem' }}>Instructions:</h4>
+              <ul style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', paddingLeft: '1.2rem', lineHeight: '1.6' }}>
+                <li>Download the sample format below to structure your data.</li>
+                <li>Make sure all column headers match the template exactly.</li>
+                <li>Ensure numbers (credit days, quantities, prices) do not contain currency symbols or units.</li>
+              </ul>
+              <button 
+                onClick={handleDownloadSample} 
+                className="btn btn-secondary" 
+                style={{ marginTop: '1.25rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <Download size={14} />
+                <span>Download Sample Template</span>
+              </button>
+            </div>
+          </div>
+
+          {bulkPreview.length > 0 && (
+            <div style={{ marginTop: '2rem', borderTop: '1px solid var(--border-glass)', paddingTop: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 800 }}>Import Preview ({bulkPreview.length} records found)</h4>
+                <button onClick={handleConfirmImport} className="btn btn-primary" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }} disabled={importing}>
+                  {importing ? 'Importing...' : 'Confirm Bulk Import'}
+                </button>
+              </div>
+              <div style={{ overflowX: 'auto', maxHeight: '200px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', border: '1px solid var(--border-glass)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--text-muted)' }}>
+                      {Object.keys(bulkPreview[0]).map(key => (
+                        <th key={key} style={{ padding: '0.5rem 0.75rem', fontWeight: 700 }}>{key}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bulkPreview.slice(0, 5).map((row, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                        {Object.values(row).map((val, i) => (
+                          <td key={i} style={{ padding: '0.5rem 0.75rem', color: 'var(--text-secondary)' }}>{String(val)}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {bulkPreview.length > 5 && (
+                  <p style={{ padding: '0.5rem 0.75rem', fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                    Showing top 5 preview records. Remaining {bulkPreview.length - 5} records will be imported.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {error && (
         <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--error)', borderRadius: 'var(--radius-md)', marginBottom: '2rem' }}>

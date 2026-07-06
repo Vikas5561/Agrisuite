@@ -23,4 +23,9 @@ public class PurchaseEntryController {
     public ResponseEntity<PurchaseEntry> createPurchase(@RequestBody PurchaseEntry entry) {
         return ResponseEntity.ok(purchaseEntryService.createPurchaseEntry(entry));
     }
+
+    @PostMapping("/bulk")
+    public ResponseEntity<List<PurchaseEntry>> createPurchasesBulk(@RequestBody List<PurchaseEntryService.PurchaseBulkRequest> requests) {
+        return ResponseEntity.ok(purchaseEntryService.createPurchasesBulk(requests));
+    }
 }

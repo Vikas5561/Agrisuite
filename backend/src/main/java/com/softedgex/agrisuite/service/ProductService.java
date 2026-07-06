@@ -164,4 +164,38 @@ public class ProductService {
         }
         productRepository.delete(product);
     }
+
+    @Transactional
+    public List<Product> createProductsBulk(List<Product> products) {
+        Long dealerId = SecurityUtils.getCurrentDealerId();
+        if (dealerId == null) {
+            throw new AccessDeniedException("No dealer context found");
+        }
+        if (!subscriptionService.checkFeatureAccess(dealerId)) {
+            throw new AccessDeniedException("Your subscription has expired or is in the Grace Period. You cannot add products.");
+        }
+
+        List<Product> saved = new java.util.ArrayList<>();
+        for (Product p : products) {
+            if (p.getName() == null || p.getName().isBlank()) {
+                continue;
+            }
+            // Skip duplicates by Product Name under same dealer
+            if (productRepository.findByDealerId(dealerId).stream()
+                    .anyMatch(prod -> prod.getName().equalsIgnoreCase(p.getName()))) {
+                continue;
+            }
+
+            long count = productRepository.count() + saved.size();
+            p.setProductCode(String.format("PRD%06d", count + 1));
+            p.setDealerId(dealerId);
+            if (p.getStock() == null || p.getStock() <= 0) {
+                p.setStatus("OUT_OF_STOCK");
+            } else {
+                p.setStatus("ACTIVE");
+            }
+            saved.add(productRepository.save(p));
+        }
+        return saved;
+    }
 }
