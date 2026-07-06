@@ -31,8 +31,11 @@ public class SecurityInterceptor implements HandlerInterceptor {
 
         String path = request.getRequestURI();
         
-        // Skip public paths
-        if (path.startsWith("/api/v1/auth") || path.startsWith("/h2-console") || path.startsWith("/api/v1/payments/webhook") || path.startsWith("/api/v1/payments/config-check")) {
+        // Skip public paths (except authenticated endpoints like change-password)
+        if ((path.startsWith("/api/v1/auth") && !path.startsWith("/api/v1/auth/change-password")) 
+                || path.startsWith("/h2-console") 
+                || path.startsWith("/api/v1/payments/webhook") 
+                || path.startsWith("/api/v1/payments/config-check")) {
             return true;
         }
 
