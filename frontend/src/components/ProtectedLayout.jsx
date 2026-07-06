@@ -156,9 +156,19 @@ export const ProtectedLayout = ({ children, allowedRoles }) => {
                 }} 
               />
             ) : (
-              <div style={{ padding: '0.5rem', borderRadius: '12px', background: 'var(--accent-glow)' }}>
-                <Wheat size={28} style={{ color: 'var(--accent-primary)' }} />
-              </div>
+              <img 
+                src="/logo.jpg" 
+                alt="AgriSuite Logo" 
+                style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '8px', 
+                  objectFit: 'contain', 
+                  background: '#ffffff',
+                  padding: '2px',
+                  border: '1px solid var(--border-glass)' 
+                }} 
+              />
             )}
             <div>
               <h2 style={{ fontSize: '1.1rem', fontWeight: 800, letterSpacing: '-0.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '170px' }} title={user.role === 'SUPER_ADMIN' ? (localStorage.getItem('platformName') || 'AgriSuite SuperAdmin') : (user.businessName || 'AgriSuite')}>
@@ -239,9 +249,18 @@ export const ProtectedLayout = ({ children, allowedRoles }) => {
                 }} 
               />
             ) : (
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'var(--accent-primary)' }}>
-                {(user.displayName || user.username).substring(0, 2).toUpperCase()}
-              </div>
+              <img 
+                src="/logo.jpg" 
+                alt="Default Avatar" 
+                style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%', 
+                  objectFit: 'cover', 
+                  background: '#ffffff',
+                  border: '1px solid var(--border-glass)' 
+                }} 
+              />
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: '0.9rem', fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={user.displayName || user.username}>{user.displayName || user.username}</div>

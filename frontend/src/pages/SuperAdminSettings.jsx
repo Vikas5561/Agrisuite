@@ -1,11 +1,54 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, api } from '../context/AuthContext';
 import { motion } from 'framer-motion';
-import { Save, Laptop, ShieldAlert, Key, Globe } from 'lucide-react';
+import { Save, Laptop, ShieldAlert, Key, Globe, Lock } from 'lucide-react';
 import { t } from '../utils/translations';
 
 export const SuperAdminSettings = () => {
-  const { user, language, changeLanguage } = useAuth();
+  const { user, language, changeLanguage, logout } = useAuth();
+  
+  // Change Password State
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwdLoading, setPwdLoading] = useState(false);
+  const [pwdSuccess, setPwdSuccess] = useState('');
+  const [pwdError, setPwdError] = useState('');
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPwdLoading(true);
+    setPwdSuccess('');
+    setPwdError('');
+
+    if (newPassword !== confirmPassword) {
+      setPwdError('New passwords do not match');
+      setPwdLoading(false);
+      return;
+    }
+
+    try {
+      const apiEndpoint = '/api/v1/auth/change-password';
+      await api.put(apiEndpoint, {
+        currentPassword,
+        newPassword,
+        confirmPassword
+      });
+      setPwdSuccess('Administrator password updated successfully! Please re-login with your new credentials.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      
+      // Auto-logout after 2.5 seconds
+      setTimeout(() => {
+        logout();
+      }, 2500);
+    } catch (err) {
+      setPwdError(err.response?.data?.message || 'Failed to update administrator password. Please ensure it has at least 8 characters, containing uppercase, lowercase, numbers, and special characters.');
+    } finally {
+      setPwdLoading(false);
+    }
+  };
   
   // Platform parameters state
   const [platformName, setPlatformName] = useState(localStorage.getItem('platformName') || 'SoftEdgeX AgriSuite Inc.');
@@ -42,7 +85,7 @@ export const SuperAdminSettings = () => {
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Configure platform parameters, corporate identity, billing logo, and administrative access details</p>
       </div>
 
-      <div className="grid-cols-1" style={{ gap: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(440px, 1fr))', gap: '2rem', alignItems: 'start' }}>
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-panel" style={{ padding: '2.5rem' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--accent-primary)' }}>Corporate Platform Identity</h2>
           
@@ -120,6 +163,74 @@ export const SuperAdminSettings = () => {
               </button>
             </div>
 
+          </form>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          className="glass-panel" 
+          style={{ padding: '2.5rem' }}
+        >
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Lock size={18} />
+            <span>Change Administrator Password</span>
+          </h2>
+          
+          <form onSubmit={handleChangePassword}>
+            {pwdSuccess && (
+              <div style={{ padding: '1rem', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--accent-primary)', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem', fontSize: '0.85rem', lineHeight: '1.4' }}>
+                {pwdSuccess}
+              </div>
+            )}
+            {pwdError && (
+              <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--error)', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem', fontSize: '0.85rem', lineHeight: '1.4' }}>
+                {pwdError}
+              </div>
+            )}
+
+            <div className="form-group">
+              <label className="form-label">Current Password *</label>
+              <input 
+                required 
+                type="password" 
+                className="input-field" 
+                value={currentPassword} 
+                onChange={(e) => setCurrentPassword(e.target.value)} 
+                placeholder="••••••••"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">New Password *</label>
+              <input 
+                required 
+                type="password" 
+                className="input-field" 
+                value={newPassword} 
+                onChange={(e) => setNewPassword(e.target.value)} 
+                placeholder="Min 8 chars, 1 uppercase, 1 number, 1 symbol"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Confirm New Password *</label>
+              <input 
+                required 
+                type="password" 
+                className="input-field" 
+                value={confirmPassword} 
+                onChange={(e) => setConfirmPassword(e.target.value)} 
+                placeholder="••••••••"
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2rem' }}>
+              <button type="submit" className="btn btn-primary" disabled={pwdLoading}>
+                <Save size={16} />
+                <span>{pwdLoading ? 'Updating Password...' : 'Update Password'}</span>
+              </button>
+            </div>
           </form>
         </motion.div>
       </div>
